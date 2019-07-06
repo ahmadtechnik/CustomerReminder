@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script>
+        var $ = require("jquery");
+        var jQuery = require("jquery")
+    </script>
+
+    <!-- jQuery -->
+    <script src="./assets/jquery/jquery.js"></script>
+    <!-- jQueryUI -->
+    <script src="assets/jqueryUI/jquery-ui.js"></script>
+    <link rel="stylesheet" href="./assets/jqueryUI/jquery-ui.css">
+    <!-- SemanticUI -->
+    <script src="assets/semanticUI/semantic.min.js"></script>
+    <link rel="stylesheet" href="./assets/semanticUI/semantic.css">
+
+    <!-- external -->
+    <script src="assets/main.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Index</title>
+</head>
+
+<body>
+    <div class="ui segments" id="">
+        <div class="ui segment  placeholder">
+            <div class="ui icon header">
+                <i class="pdf file outline icon"></i>
+                <span id="uploadedFileName">No documents are listed for this customer.</span>
+            </div>
+            <div class="ui primary button" id="uploadFile" onclick="$('#uploadeFileHiddenBtn').click()">Upload File</div>
+            <input type="file" id="uploadeFileHiddenBtn" style="display: none;">
+        </div>
+    </div>
+</body>
+
+</html>
