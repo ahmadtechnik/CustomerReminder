@@ -1,0 +1,9 @@
+.cursor {
+    cursor: pointer;
+}
+
+.firstCell {
+    background: #445564;
+    color: white;
+    cursor: pointer;
+}

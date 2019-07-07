@@ -18,6 +18,7 @@
 
     <!-- external -->
     <script src="assets/main.js"></script>
+    <link rel="stylesheet" href="./assets/main.css">
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,14 +27,23 @@
 </head>
 
 <body>
-    <div class="ui segments" id="">
-        <div class="ui segment  placeholder">
-            <div class="ui icon header">
-                <i class="pdf file outline icon"></i>
-                <span id="uploadedFileName">No documents are listed for this customer.</span>
+    <div class="ui sidebar inverted vertical menu">
+        
+    </div>
+    <div class="ui pusher">
+        <div class="ui segments" id="">
+            <div class="ui segment  placeholder">
+                <div class="ui icon header">
+                    <i class="pdf file outline icon"></i>
+                    <span id="uploadedFileName">No documents are listed for this customer.</span>
+                </div>
+                <div class="ui primary button" id="uploadFile" onclick="$('#uploadeFileHiddenBtn').click()">Upload File
+                </div>
+                <input type="file" id="uploadeFileHiddenBtn" style="display: none;">
             </div>
-            <div class="ui primary button" id="uploadFile" onclick="$('#uploadeFileHiddenBtn').click()">Upload File</div>
-            <input type="file" id="uploadeFileHiddenBtn" style="display: none;">
+        </div>
+        <div class="sheetsContainer" id="sheetsContainer">
+
         </div>
     </div>
 </body>
