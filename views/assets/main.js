@@ -15,6 +15,12 @@ $(document).ready(() => {
 });
 
 var SELECT_CLASS = ["ui", "segment", "teal", "inverted", "basic"];
+var HIDE_CSS_CLASS = {
+    "display": "none",
+};
+var SHOW_CSS_CLASS = {
+    "display": ""
+};
 
 function onFileUploadedAction(event) {
     var file = this.files[0];
@@ -39,7 +45,7 @@ function onFileUploadedAction(event) {
                     var table = $($(html)[2]);
 
                     // create new table
-                    var tableE = $(`<table class="ui small table"></table>`);
+                    var tableE = $(`<table class="ui celled  very compacttable table"></table>`);
                     var tableHead = $(`<thead></thead>`);
                     var tableBody = $(`<tbody></thead>`);
 
@@ -138,9 +144,6 @@ function onFileUploadedAction(event) {
                                             background: "#33cc33",
                                             color: "white"
                                         });
-
-                                        diffYears ? $(chiled).append("<br>" + diffYears) : "";
-
                                     }
                                 }
                                 /** add action to first cell in the table */
@@ -189,16 +192,12 @@ function onSearchFieldsKeyDown(event) {
                     var inclodes = cellValue.includes(interedValue);
                     var oldBackGround = $(row).css("background");
                     if (inclodes) {
-                        $(row).css({
-                            "display": "",
-                        });
+                        $(row).css(SHOW_CSS_CLASS);
                         $(cell).transition({
                             animation: 'pulse',
                         });
                     } else {
-                        $(row).css({
-                            "display": "none",
-                        });
+                        $(row).css(HIDE_CSS_CLASS);
                     }
                 }
             });
@@ -206,9 +205,7 @@ function onSearchFieldsKeyDown(event) {
         $(this).select();
     }
     if (interedValue === "") {
-        tableRows.css({
-            "display": "",
-        });
+        tableRows.css(SHOW_CSS_CLASS);
     }
 }
 /** 
@@ -226,9 +223,7 @@ function onSearchFieldFucosout(event) {
         });
     });
     if ($(this).val() === "") {
-        tableRows.css({
-            "display": "",
-        });
+        tableRows.css(SHOW_CSS_CLASS);
     }
 }
 /**
@@ -253,43 +248,115 @@ function onSearchFieldFucosIn(event) {
     });
 
     if (interedValue === "") {
-        tableRows.css({
-            "display": "",
-        });
+        tableRows.css(SHOW_CSS_CLASS);
     }
 }
 /** 
  * 
  */
+var CHOOSED_ROW_TABLE = [];
+
 function onCellClickAction(event) {
     var currentRow = event.target.parentElement;
     var rowID = currentRow.getAttribute("id");
     var cellsInRow = $(currentRow).find("td");
     var tableHeader = cellsInRow.closest("table").find("thead").find("tr").find("th");
+    CHOOSED_ROW_TABLE = cellsInRow;
 
     var rowData = [];
     rowData[0] = "<div class='ui center aligned icon header'>-Customers data-</div>";
     cellsInRow.each((i, e) => {
+        var cellBGcolor = $(e).css("background-color");
         if ($(e).text() !== "") {
-            rowData.push("<p>" + $(tableHeader[i]).text() + " : " + `<span class="boldFont">${$(e).text()}</span>` + "</p>");
+            var style = `style="background:${cellBGcolor}; color : white;"`;
+            if (cellBGcolor !== "rgba(0, 0, 0, 0)") {
+                style = `style="background:${cellBGcolor}; color : white;"`;
+            } else {
+                style = `style=""`;
+            }
+            var spanE = `<span class="boldFont">${$(e).text()}</span>`;
+            var pE = `<p ${style} >` + $(tableHeader[i]).text() + " : " + spanE + "</p>";
+            rowData.push(pE);
         }
     });
 
     $(`#dinamicModalHeader`).html(`<h1>VP-Name : ${rowID}</h1>`);
+
 
     var gridPure = $(`<div class="ui two column grid stackable divided celled"></div>`);
     var gridRow = $(`<div class="row"></div>`);
     var leftSectionColumn = $(`<div class="column"></div>`);
     var rightSectionColumn = $(`<div class="column"></div>`);
 
+
+    /** */
     leftSectionColumn.html(rowData);
-    rightSectionColumn.html("<h1>asd</h1>")
+    /**  */
+    rightSectionColumn.html($(
+        $(`<div class="ui form large" id="insertNewDataForm"></div>`)
+        .append([
+            $(`<div class="field"></div>`)
+            .append([`<label>Kundennummer<label>`, `<input type="text" id="customer_number"/>`]),
+            $(`<div class="field"></div>`)
+            .append([`<label>Lieferdatum<label>`, `<input type="text" id="delivery_date" />`]),
+            $(`<div class="field"></div>`)
+            .append([`<label>Laufzeit des vertrags<label>`, `<input type="text" id="contracts_term" />`]),
+            $(`<div class="field"></div>`)
+            .append([`<label>hinweise<label>`, `<textarea rows="2" id="notes"></textarea>`])
+        ])
+    ));
+
+    /** assign the grid left and right section to modal content */
     gridRow.html([leftSectionColumn, rightSectionColumn]);
     gridPure.html(gridRow);
+
+    /** add modal actions buttons */
+    var modalBtns = [
+        `<div class="ui button cancel red">Close</div>`,
+        `<div class="ui button ok green">Ok</div>`
+    ];
+
+    /** insert new elements to modal */
+    $(`#dinamicModalAcitons`).html(modalBtns);
     $(`#dinamicModalContent`).html(gridPure);
-    $(`#dinamicModal`).modal("show");
+    /** add modal properties */
+    $(`#dinamicModal`).modal({
+        closable: false,
+        onShow: onInsertDataModalShow,
+        onApprove: onInsertDataModalOnApprove,
+        onDeny: onInsertDataModalOnDeny
+    }).modal("show");
 
 }
+
+/** */
+function onInsertDataModalShow(modal) {
+    $("#delivery_date").unbind("datepicker");
+    $("#delivery_date").datepicker({
+        showButtonPanel: true,
+    });
+}
+/** */
+function onInsertDataModalOnApprove(modal) {
+    var customer_number = $(`#customer_number`).val();
+    var delivery_date = $("#delivery_date").datepicker({
+        dateFormat: 'dd-mm-yyyy'
+    }).val();
+    var contracts_term = $(`#contracts_term`).val();
+    var notes = $(`#notes`).val();
+    if (customer_number === "" || delivery_date === "" || contracts_term === "") {
+        $(`#customer_number`).closest(".ui.form").find(".field").addClass("error");
+        return false;
+    }else{
+
+    }
+    CHOOSED_ROW_TABLE.push();
+}
+/** */
+function onInsertDataModalOnDeny(modal) {
+
+}
+
 var regularEx = {
     MobileWithCountryCode: /^([\+]?)([0-9]{1,4}?)[.\s-]?([0-9]{3,5}?)[.\s-]?([0-9]{4,10}?)$/i,
     PhoneNumberWithoutCode: "",
@@ -297,3 +364,12 @@ var regularEx = {
     dates: /^\d{1,2}\/\d{1,2}\/\d{2,4}$/,
     datesPoints: /^\d{1,2}[.-\//]\d{1,2}[.-\//]\d{4}$/
 }
+
+
+/**
+ * TO ADD
+ * - Kundennummer
+ * - Lieferdatum
+ * - Laufzeit des vertrags
+ * - hinweise
+ */
