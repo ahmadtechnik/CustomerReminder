@@ -7,3 +7,15 @@
     color: white;
     cursor: pointer;
 }
+
+.boxShadow {
+    box-shadow: 0 10px 6px -6px #777;
+}
+
+.withoutShadow {
+    box-shadow: none;
+}
+
+.boldFont {
+    font-weight: 900;
+}

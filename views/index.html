@@ -28,23 +28,61 @@
 
 <body>
     <div class="ui sidebar inverted vertical menu">
-        
+
     </div>
     <div class="ui pusher">
-        <div class="ui segments" id="">
-            <div class="ui segment  placeholder">
-                <div class="ui icon header">
-                    <i class="pdf file outline icon"></i>
-                    <span id="uploadedFileName">No documents are listed for this customer.</span>
+        <!--  -->
+        <div class="ui segment">
+            <div class="ui accordion" id="uploadFileAccordion">
+                <div class="title"><i class="dropdown icon"></i>Uplad New Table</div>
+                <div class="content">
+                    <div class="ui segments" id="topFileUploaderSeciton">
+                        <div class="ui segment  placeholder">
+                            <div class="ui icon header">
+                                <i class="pdf file outline icon"></i>
+                                <span id="uploadedFileName">No documents are listed for this customer.</span>
+                            </div>
+                            <div class="ui primary button" id="uploadFile" onclick="$('#uploadeFileHiddenBtn').click()">
+                                Upload File
+                            </div>
+                            <input type="file" id="uploadeFileHiddenBtn" style="display: none;">
+                        </div>
+                    </div>
                 </div>
-                <div class="ui primary button" id="uploadFile" onclick="$('#uploadeFileHiddenBtn').click()">Upload File
-                </div>
-                <input type="file" id="uploadeFileHiddenBtn" style="display: none;">
             </div>
         </div>
-        <div class="sheetsContainer" id="sheetsContainer">
-
+        <!--  -->
+        <div class="ui segment">
+            <div class="ui form">
+                <div class="equal width fields">
+                    <div class="field">
+                        <label for="">Search By Auftr.-Nr.</label>
+                        <input type="text" placeholder="48546.." class="searchByInputField" by="1">
+                    </div>
+                    <div class="field">
+                        <label for="">Search By Kundenname.</label>
+                        <input type="text" placeholder="Kundenname.." class="searchByInputField" by="6">
+                    </div>
+                    <div class="field">
+                        <label for="">Search By Zählernummer</label>
+                        <input type="text" placeholder="Zählernummer.." class="searchByInputField" by="10">
+                    </div>
+                    <div class="field">
+                        <label for="">Search By Tarif/Produkt</label>
+                        <input type="text" placeholder="Tarif/Produkt" class="searchByInputField" by="11">
+                    </div>
+                </div>
+                <span>Please press 'Enter' after entering your search word</span>
+            </div>
         </div>
+        <!--  -->
+        <div class="sheetsContainer" id="sheetsContainer">
+        </div>
+    </div>
+    <div class="ui modal fullscreen" id="dinamicModal">
+        <div class="header" id="dinamicModalHeader"></div>
+        <div class="content" id="dinamicModalContent"></div>
+        <div class="actions" id="dinamicModalAcitons"></div>
     </div>
 </body>
 
