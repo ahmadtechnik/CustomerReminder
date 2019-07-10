@@ -4,7 +4,7 @@ var {
     Menu,
     BrowserWindow
 } = require("electron");
-
+var path = require("path");
 
 app.on("ready", appOnReady)
 app.on("before-quit", () => {
@@ -31,6 +31,11 @@ function WindowOnClose(thisWindow) {
     console.log("Window Closed");
 }
 
+/** BACKGROUND SERVICE ACTION */
+
+
+
+/*
 var childProcess = require('child_process');
 
 function runScript(scriptPath, callback) {
@@ -62,3 +67,4 @@ runScript('./BGP.js &', function (err) {
     if (err) throw err;
     console.log('finished running some-script.js');
 });
+*/
