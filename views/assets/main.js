@@ -484,31 +484,37 @@ function initStoredData() {
     var table = $(`<table class="ui  single line very compacttable table fixed" id="statDataFileTable"></table>`);
     var tableHead = $(`<thead></thead>`);
     var tableBody = $(`<tbody></tbody>`);
+    var containData = false ;
     // each all sheets in static file
     $.each(F, (i, sheet) => {
         var sheetName = i;
         // each current sheet
-        $.each(sheet, (i, row) => {
-            // in case was the current row the table header
-            if (i === "tableHeader") {
-                var emptyTableRow = $(`<tr></tr>`);
-                $.each(row, (i, v) => {
-                    emptyTableRow.append(`<th cell="${i}">${v}</th>`);
-                    $(`#cellFilter`).append(`<option value="${i}">${v}</option>`)
-                });
-                tableHead.append(emptyTableRow);
-            } else {
-                var emptyTableRow = $(`<tr></tr>`);
-                $.each(row, (i, v) => {
-                    emptyTableRow.append(`<td cell="${i}">${v}</td>`);
-                });
-                addPopupContent(emptyTableRow)
-                tableBody.append(emptyTableRow);
-            }
-        });
-    })
+        if (Object.keys(sheet).length > 1) {
+            containData = true ;
+            $.each(sheet, (i, row) => {
+                // in case was the current row the table header
+                if (i === "tableHeader") {
+                    var emptyTableRow = $(`<tr></tr>`);
+                    $.each(row, (i, v) => {
+                        emptyTableRow.append(`<th cell="${i}">${v}</th>`);
+                        $(`#cellFilter`).append(`<option value="${i}">${v}</option>`)
+                    });
+                    tableHead.append(emptyTableRow);
+                } else {
+                    var emptyTableRow = $(`<tr></tr>`);
+                    $.each(row, (i, v) => {
+                        emptyTableRow.append(`<td cell="${i}">${v}</td>`);
+                    });
+                    addPopupContent(emptyTableRow)
+                    tableBody.append(emptyTableRow);
+                }
+            });
+        }
+    });
+    if(containData){
     table.append([tableHead, tableBody]);
     $(`#oldDataStoredInStaticFile`).html(table);
+    }
 }
 var regularEx = {
     MobileWithCountryCode: /^([\+]?)([0-9]{1,4}?)[.\s-]?([0-9]{3,5}?)[.\s-]?([0-9]{4,10}?)$/i,
@@ -542,14 +548,14 @@ function addPopupContent(row) {
             show: 500,
             hide: 100
         },
-        setFluidWidth: true 
+        setFluidWidth: true,
     });
 
     function getCellNamesAsHTML() {
         var HTML = $(`<div class="ui segment inverted orange"></div>`);
         $(row).find("td").each((i, v) => {
-            var line = $("<p>" + $(v).text() + "</p>")
-            HTML.append(line);
+            var line = $("<span calss='noPadding'>" + $(v).text() + "</span>")
+            HTML.append([line , "<br>"]);
         });
         return HTML;
     }

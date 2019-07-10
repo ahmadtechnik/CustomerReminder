@@ -19,3 +19,6 @@
 .boldFont {
     font-weight: 900;
 }
+.noPadding{
+    padding: 0px !important;
+}
