@@ -19,6 +19,27 @@
 .boldFont {
     font-weight: 900;
 }
-.noPadding{
+
+.noPadding {
     padding: 0px !important;
+}
+
+.redWhite {
+    background: red;
+    color: white;
+}
+
+.blueWhite {
+    background: blue;
+    color: white;
+}
+
+.blackWhite {
+    background: #515151;
+    color: white;
+}
+
+.dateBackGround {
+    background: "#ff9966";
+    color: "white";
 }

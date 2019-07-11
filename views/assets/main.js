@@ -7,7 +7,8 @@ $(document).ready(() => {
     $(`.dropdown`).dropdown({
         onChange: onCellCleanerChange,
         onAdd: onAddSelectItem,
-        onRemove: onRemoveSelectItem
+        onRemove: onRemoveSelectItem,
+        clearable: true
     });
     //
     $(`#uploadeFileHiddenBtn`).change(onFileUploadedAction);
@@ -31,12 +32,6 @@ var SHOW_CSS_CLASS = {
     "display": ""
 };
 
-var TEXT_OVERFLOW_DISABLE = {
-
-}
-var TEXT_OVERFLOW_ENABLE = {
-
-}
 
 function onFileUploadedAction(event) {
     var file = this.files[0];
@@ -45,14 +40,12 @@ function onFileUploadedAction(event) {
         var fileReader = new FileReader();
         fileReader.onload = (F) => {
             var file = new Uint8Array(F.target.result);
-
             var xlsxFile = XLSX.read(file, {
                 type: "array"
             }).Sheets;
 
             $.each(xlsxFile, (index, sheet) => {
                 var jsonSheet = XLSX.utils.sheet_to_json(sheet);
-
                 if (jsonSheet.length > 0) {
 
                     /**
@@ -77,7 +70,7 @@ function onFileUploadedAction(event) {
                     var ColumnsIndexes = {};
                     $(tableHeader).find("td").each((i, v) => {
                         /** write table head */
-                        $(v).replaceWith(`<th cell="${i}">${v.textContent}-${i}</th>`);
+                        $(v).replaceWith(`<th hcell="${i}">${v.textContent}-${i}</th>`);
                         ColumnsIndexes[i] = $(v).text();
                         // push the header cells to header file
                         sheetHeader.push($(v).text());
@@ -188,23 +181,29 @@ function onFileUploadedAction(event) {
                                     $(chiled).click(onCellClickAction);
                                 }
                             });
-
+                            addPopupContent(row);
                         }
                     });
 
                     tableHead.append(tableHeader);
                     tableE.append(tableHead);
                     tableE.append(tableBody);
-
-                    $(`#sheetsContainer`).append(tableE);
+                    var clearThisTableBtn = $(`<div class="ui button top attached red">Remove Table</div>`);
+                    clearThisTableBtn.click(() => {
+                        $(`#sheetsContainer`).html("");
+                    });
+                    $(`#sheetsContainer`).append([clearThisTableBtn, tableE]);
                 }
-            })
+            });
         };
         fileReader.readAsArrayBuffer(file);
         //var read = XLSX.read(file);
         //console.log(read);
         $('#uploadFileAccordion').accordion("close", 0);
+    } else {
+        $(`#uploadedFileName`).text("No documents are listed for this customer.");
     }
+    dateCellDetactor();
 }
 /** 
  * 
@@ -272,7 +271,7 @@ function onSearchFieldFucosout(event) {
     if ($(this).val() === "") {
         tableRows.css(SHOW_CSS_CLASS);
     }
-    $(cell).css(TEXT_OVERFLOW_ENABLE);
+
 }
 /**
  * 
@@ -294,14 +293,13 @@ function onSearchFieldFucosIn(event) {
         $(row).find("td").each((i, cell) => {
             if (i === by) {
                 $(cell).removeClass(SELECT_CLASS).addClass(SELECT_CLASS);
-                $(cell).css(TEXT_OVERFLOW_DISABLE);
+
             }
         });
     });
 
     if (interedValue === "") {
         tableRows.css(SHOW_CSS_CLASS);
-        $(cell).css(TEXT_OVERFLOW_ENABLE);
     }
 }
 /** 
@@ -351,9 +349,9 @@ function onCellClickAction(event) {
             $(`<div class="field"></div>`)
             .append([`<label>Kundennummer<label>`, `<input type="text" id="customer_number"/>`]),
             $(`<div class="field"></div>`)
-            .append([`<label>Lieferdatum<label>`, `<input type="text" id="delivery_date" />`]),
+            .append([`<label>Lieferdatum<label>`, `<input type="text" id="delivery_date" readonly="readonly" />`]),
             $(`<div class="field"></div>`)
-            .append([`<label>Laufzeit des vertrags<label>`, `<input type="text" id="contracts_term" />`]),
+            .append([`<label>Laufzeit des vertrags <span class="redWhite">in Months</span><label>`, `<input type="text" id="contracts_term" />`]),
             $(`<div class="field"></div>`)
             .append([`<label>hinweise<label>`, `<textarea rows="2" id="notes"></textarea>`])
         ])
@@ -384,7 +382,9 @@ function onCellClickAction(event) {
 
 /** */
 function onInsertDataModalShow(modal) {
-    $("#delivery_date").datepicker();
+    $("#delivery_date").datepicker({
+        dateFormat: 'dd/mm/yy'
+    });
     $(`#dinamicModal`).modal("refresh");
 }
 /** */
@@ -424,7 +424,7 @@ function onInsertDataModalOnApprove(modal) {
             /** compair header length with new entered data */
             var header = oldDataStored[sheetname]["tableHeader"];
             if (header.length < rowToWriteToFile.length) {
-                oldDataStored[sheetname]["tableHeader"].push("customer_number", "delivery_date", "contracts_term", "notes");
+                oldDataStored[sheetname]["tableHeader"].push("Kundennummer", "Lieferdatum", "Vertragslaufzeit", "Notiz");
                 console.log("New cell added to header of the table");
             }
             // in case the row was not exist in the sheet object
@@ -480,69 +480,80 @@ function writeNewDataToFile(fileName, data) {
 
 /** init the existed Data in table on app starts or page refreshed */
 function initStoredData() {
+    $(`#oldDataStoredInStaticFile`).html("");
     var F = createOrOpenFile("staticData.json");
-    var table = $(`<table class="ui  single line very compacttable table fixed" id="statDataFileTable"></table>`);
-    var tableHead = $(`<thead></thead>`);
-    var tableBody = $(`<tbody></tbody>`);
-    var containData = false ;
+    var headAdded = false;
     // each all sheets in static file
     $.each(F, (i, sheet) => {
         var sheetName = i;
+        var table = $(`<table class="ui single line very compacttable table fixed" id="${sheetName}"></table>`);
+        var tableHead = $(`<thead></thead>`);
+        var tableBody = $(`<tbody></tbody>`);
+        var containData = false;
+        var tableHeader = sheet["tableHeader"];
         // each current sheet
         if (Object.keys(sheet).length > 1) {
-            containData = true ;
+            containData = true;
             $.each(sheet, (i, row) => {
                 // in case was the current row the table header
                 if (i === "tableHeader") {
-                    var emptyTableRow = $(`<tr></tr>`);
+                    var emptyTableRow = $(`<tr id="${sheetName}"></tr>`);
                     $.each(row, (i, v) => {
-                        emptyTableRow.append(`<th cell="${i}">${v}</th>`);
-                        $(`#cellFilter`).append(`<option value="${i}">${v}</option>`)
+                        emptyTableRow.append(`<th cell="${i}" >${v}</th>`);
+                        $(`#cellFilter`).append(`<option value="${i}">${v}</option>`);
+
                     });
                     tableHead.append(emptyTableRow);
                 } else {
-                    var emptyTableRow = $(`<tr></tr>`);
+
+                    var emptyTableRow = $(`<tr class="" id="${i}" sheetName="${sheetName}" ></tr>`);
                     $.each(row, (i, v) => {
-                        emptyTableRow.append(`<td cell="${i}">${v}</td>`);
+                        var datesPoints = v.match(regularEx.datesPoints);
+                        if (datesPoints) {
+                            /** replace the point with slash */
+                            v.replace(/[.]/g, "/");
+                        }
+                        emptyTableRow.append(`<td hCell="${tableHeader[i]}" cell="${i}" >${v}</td>`);
                     });
-                    addPopupContent(emptyTableRow)
+                    // add popup to sub data row of the table
+
                     tableBody.append(emptyTableRow);
+                    addPopupContent(emptyTableRow);
                 }
             });
         }
+        if (containData) {
+            table.append([tableHead, tableBody]);
+            $(`#oldDataStoredInStaticFile`).append(table);
+        }
+        // end each the sheets
     });
-    if(containData){
-    table.append([tableHead, tableBody]);
-    $(`#oldDataStoredInStaticFile`).html(table);
-    }
-}
-var regularEx = {
-    MobileWithCountryCode: /^([\+]?)([0-9]{1,4}?)[.\s-]?([0-9]{3,5}?)[.\s-]?([0-9]{4,10}?)$/i,
-    PhoneNumberWithoutCode: "",
-    EmailAddress: /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/igm,
-    dates: /^\d{1,2}\/\d{1,2}\/\d{2,4}$/,
-    datesPoints: /^\d{1,2}[.-\//]\d{1,2}[.-\//]\d{4}$/
+    dateCellDetactor();
 }
 
 /** on dropdown menu selector */
-function onCellCleanerChange(value, text, choice) {}
+function onCellCleanerChange(value, text, choice) {
+    $(`[cell]`).css(HIDE_CSS_CLASS);
+    $(`[cell='${value}']`).css(SHOW_CSS_CLASS);
+    if (value === "") $(`[cell]`).css(SHOW_CSS_CLASS);
+}
 /** show and hide cell from tables */
 function onAddSelectItem(addedValue, addedText, $addedChoice) {
-    $(`[cell='${addedValue}']`).css(HIDE_CSS_CLASS);
+
 }
 
 function onRemoveSelectItem(removedValue, removedText, $removedChoice) {
-    $(`[cell='${removedValue}']`).css(SHOW_CSS_CLASS);
+    $(`[cell='${removedValue}']`).css(HIDE_CSS_CLASS);
 }
 
 /** add popup to row free HTML code */
 function addPopupContent(row) {
+    var sheetName = $(row).attr("sheetName");
 
     $(row).popup({
         html: $(getCellNamesAsHTML()),
         inline: true,
         hoverable: true,
-        arrowPixelsFromEdge: 100,
         transition: "zoom",
         delay: {
             show: 500,
@@ -554,11 +565,105 @@ function addPopupContent(row) {
     function getCellNamesAsHTML() {
         var HTML = $(`<div class="ui segment inverted orange"></div>`);
         $(row).find("td").each((i, v) => {
-            var line = $("<span calss='noPadding'>" + $(v).text() + "</span>")
-            HTML.append([line , "<br>"]);
+            var h = $(v).attr("hCell") !== undefined ? $(v).attr("hCell") + " : " : ""
+            var d = `<span class="blackWhite">${$(v).text()}</span>`;
+            var line = $("<span calss='noPadding'>" + h + d + "</span>")
+            HTML.append([line, "<br>"]);
         });
         return HTML;
     }
+
+}
+
+function dateCellDetactor() {
+    var allCells = $(`[cell]`);
+    var thisYear = new Date().getFullYear();
+
+    allCells.each((i, e) => {
+        if ($(e).attr("DO")) {
+            return false;
+        }
+        if ($(e).text().match(regularEx.dates) || $(e).text().match(regularEx.datesPoints)) {
+
+            /** repace the sign in between the numbers to one modal */
+            var replacedDate = $(e).text().replace(/[-\.-\//]/g, "-");
+            var dateObject = new Date(replacedDate);
+
+            var fixDate = replacedDate.split("-");
+            // in case the year was only 2 digit
+            if (dateObject.getFullYear()) {
+                /** to add tow digit to first of the year */
+                fixDate.forEach((v, i) => {
+                    fixDate[i] = parseInt(v);
+
+                });
+                // in case was the date date of birth.
+                if (fixDate[2] < 100) {
+                    // in case was date of birth
+                    if (fixDate[2] >= parseInt(thisYear.toString().substr(-2))) {
+                        fixDate[2] = parseInt("19" + fixDate[2]);
+                    }
+                    // in case was date after 2000
+                    else {
+                        fixDate[2] = parseInt("20" + fixDate[2]);
+                    }
+                }
+                $(e).text(fixDate.join("-"));
+                replacedDate = fixDate.join("-");
+
+            } else {
+                fixDate.forEach((v, i) => {
+                    fixDate[i] = parseInt(v);
+                });
+                $(e).text(fixDate.join("-"));
+                replacedDate = fixDate.join("-")
+            }
+            var split = replacedDate.toString().split("-");
+            var finalDate = new Date();
+            finalDate.setFullYear(split[2]);
+            finalDate.setMonth(split[1]);
+            finalDate.setDate(split[0]);
+            finalDate.setHours("00");
+            finalDate.setMinutes("00");
+            finalDate.setSeconds("00");
+
+            var DateToday = new Date();
+            var Difrant = Date.parse(DateToday) - finalDate;
+            var diffDays = Math.floor(Difrant / (1000 * 60 * 60 * 24));
+            var diffYears = Math.floor(Difrant / (1000 * 60 * 60 * 24 * 365.25));
+            var diffMonthes = Math.floor(Difrant / (1000 * 60 * 60 * 24 * 30));
+
+            $(e).css({
+                background: "#ff9966",
+                color: "white"
+            });
+            // re set the cell with new date
+            $(e).text(replacedDate);
+            $(e).attr("DO", true);
+        }
+
+    });
+    compairTheDate()
+}
+/** to compair the rows */
+function compairTheDate() {
+    /** start to compair dates */
+    var D = 3;
+    var E = 18;
+    $(`td[cell="${D}"]`).each((i , D) => {
+        var rowID = $(D).parent().attr("id");
+        console.log(rowID)
+    })
+   
+}
+/** age range > 6570 && < 36500 Days*/
+/** Contracts term range 1095 . Alarm Range  */
+var regularEx = {
+    MobileWithCountryCode: /^([\+]?)([0-9]{1,4}?)[.\s-]?([0-9]{3,5}?)[.\s-]?([0-9]{4,10}?)$/i,
+    PhoneNumberWithoutCode: "",
+    EmailAddress: /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/igm,
+    dates: /^\d{1,2}\/\d{1,2}\/\d{2,4}$/,
+    datesPoints: /^\d{1,2}[-\.-\//]\d{1,2}[-\.-\//]\d{4}$/,
 
 }
 
