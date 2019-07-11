@@ -6,7 +6,6 @@ $(document).ready(() => {
     //
     $(`.dropdown`).dropdown({
         onChange: onCellCleanerChange,
-        onAdd: onAddSelectItem,
         onRemove: onRemoveSelectItem,
         clearable: true
     });
@@ -93,8 +92,6 @@ function onFileUploadedAction(event) {
                         if (index !== 0 && $(row).children().length > 0) {
                             $(row).attr("sheetName", sheet["!ref"]);
                             tableBody.append(row);
-                        } else {
-
                         }
                         /** detect if row is empty */
                         var rowDR = $(row).find("td");
@@ -105,7 +102,12 @@ function onFileUploadedAction(event) {
                         } else {
                             /** set row id from index num 1 */
                             if ($(row).find("td")[1].textContent !== "") {
+                                var otherRowWithSameID = $(`tr[id="${$(row).find("td")[1].textContent}"]`);
                                 $(row).attr("id", $(row).find("td")[1].textContent);
+                                // in case the same row exist in other table
+                                if (otherRowWithSameID.length >= 1) {
+                                    $(row).addClass("disabled");
+                                }
                             }
                         }
                         /** detect all emails and phone numbers/Emails date of birth and */
@@ -432,6 +434,7 @@ function onInsertDataModalOnApprove(modal) {
                 oldDataStored[sheetname][CHOOSED_ROW_TABLE_ID] = rowToWriteToFile;
                 writeNewDataToFile("staticData.json", oldDataStored);
                 console.log("New Row Added to sheet object");
+                $(`#${CHOOSED_ROW_TABLE_ID}`).addClass("disabled");
             } else {
                 // ask user if he would like to update the old data
                 console.log("THIS ROW IS  EXIST IN STATIC FILE");
@@ -482,7 +485,6 @@ function writeNewDataToFile(fileName, data) {
 function initStoredData() {
     $(`#oldDataStoredInStaticFile`).html("");
     var F = createOrOpenFile("staticData.json");
-    var headAdded = false;
     // each all sheets in static file
     $.each(F, (i, sheet) => {
         var sheetName = i;
@@ -505,7 +507,6 @@ function initStoredData() {
                     });
                     tableHead.append(emptyTableRow);
                 } else {
-
                     var emptyTableRow = $(`<tr class="" id="${i}" sheetName="${sheetName}" ></tr>`);
                     $.each(row, (i, v) => {
                         var datesPoints = v.match(regularEx.datesPoints);
@@ -516,19 +517,22 @@ function initStoredData() {
                         emptyTableRow.append(`<td hCell="${tableHeader[i]}" cell="${i}" >${v}</td>`);
                     });
                     // add popup to sub data row of the table
-
+                    emptyTableRow.click(secounderyTableRowClick);
                     tableBody.append(emptyTableRow);
                     addPopupContent(emptyTableRow);
                 }
             });
+
         }
         if (containData) {
             table.append([tableHead, tableBody]);
             $(`#oldDataStoredInStaticFile`).append(table);
+            console.log("APEDDED")
         }
         // end each the sheets
+        dateCellDetactor();
     });
-    dateCellDetactor();
+
 }
 
 /** on dropdown menu selector */
@@ -536,10 +540,6 @@ function onCellCleanerChange(value, text, choice) {
     $(`[cell]`).css(HIDE_CSS_CLASS);
     $(`[cell='${value}']`).css(SHOW_CSS_CLASS);
     if (value === "") $(`[cell]`).css(SHOW_CSS_CLASS);
-}
-/** show and hide cell from tables */
-function onAddSelectItem(addedValue, addedText, $addedChoice) {
-
 }
 
 function onRemoveSelectItem(removedValue, removedText, $removedChoice) {
@@ -630,8 +630,8 @@ function dateCellDetactor() {
             var DateToday = new Date();
             var Difrant = Date.parse(DateToday) - finalDate;
             var diffDays = Math.floor(Difrant / (1000 * 60 * 60 * 24));
-            var diffYears = Math.floor(Difrant / (1000 * 60 * 60 * 24 * 365.25));
             var diffMonthes = Math.floor(Difrant / (1000 * 60 * 60 * 24 * 30));
+            var diffYears = Math.floor(Difrant / (1000 * 60 * 60 * 24 * 365.25));
 
             $(e).css({
                 background: "#ff9966",
@@ -643,19 +643,47 @@ function dateCellDetactor() {
         }
 
     });
-    compairTheDate()
+    compairTheDate();
 }
+
 /** to compair the rows */
 function compairTheDate() {
     /** start to compair dates */
-    var D = 3;
-    var E = 18;
-    $(`td[cell="${D}"]`).each((i , D) => {
+    var D = 19;
+    var E = 20;
+    var F = 1;
+    var dateToday = new Date();
+    var contracts_termColumn = $(`td[cell="${E}"]`);
+    var delivery_dateColumn = $(`td[cell="${D}"]`);
+    var order_numberColumn = $(`td[cell="${F}"]`);
+
+    // each all cell which contain date
+    delivery_dateColumn.each((i, D) => {
         var rowID = $(D).parent().attr("id");
-        console.log(rowID)
-    })
-   
+        var delivery_date = $(D).text();
+        var contracts_term = contracts_termColumn[i].textContent;
+        // diffrance days in MS
+        var contracts_termInMS = (contracts_term * 30) * (1000 * 60 * 60 * 24);
+        var contracts_termInDay = (contracts_term * 30);
+        var contracts_termInDMonth = contracts_term;
+        var DA = Date.parse(dateToday) + contracts_termInMS;
+        console.log(contracts_termInDay);
+    });
+
+
 }
+
+
+/** the static file table row click action */
+function secounderyTableRowClick(event) {
+    if (event.altKey && event.ctrlKey) {
+        var F = createOrOpenFile("staticData.json");
+        $(this).remove();
+        // i have to remove this object from file
+    }
+}
+
+  
 /** age range > 6570 && < 36500 Days*/
 /** Contracts term range 1095 . Alarm Range  */
 var regularEx = {
