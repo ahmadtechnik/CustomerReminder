@@ -34,6 +34,7 @@ var SHOW_CSS_CLASS = {
 
 function onFileUploadedAction(event) {
     var file = this.files[0];
+    var thisBtn = this;
     if (file !== undefined) {
         $(`#uploadedFileName`).text(file.name);
         var fileReader = new FileReader();
@@ -92,6 +93,7 @@ function onFileUploadedAction(event) {
                         if (index !== 0 && $(row).children().length > 0) {
                             $(row).attr("sheetName", sheet["!ref"]);
                             tableBody.append(row);
+                            $(row).click(secounderyTableRowClick);
                         }
                         /** detect if row is empty */
                         var rowDR = $(row).find("td");
@@ -192,7 +194,9 @@ function onFileUploadedAction(event) {
                     tableE.append(tableBody);
                     var clearThisTableBtn = $(`<div class="ui button top attached red">Remove Table</div>`);
                     clearThisTableBtn.click(() => {
+                        $(thisBtn).val("");
                         $(`#sheetsContainer`).html("");
+                        $(thisBtn).change();
                     });
                     $(`#sheetsContainer`).append([clearThisTableBtn, tableE]);
                 }
@@ -485,8 +489,11 @@ function writeNewDataToFile(fileName, data) {
 function initStoredData() {
     $(`#oldDataStoredInStaticFile`).html("");
     var F = createOrOpenFile("staticData.json");
+    var length = Object.keys(F).length;
+    var counter = 0;
     // each all sheets in static file
     $.each(F, (i, sheet) => {
+
         var sheetName = i;
         var table = $(`<table class="ui single line very compacttable table fixed" id="${sheetName}"></table>`);
         var tableHead = $(`<thead></thead>`);
@@ -529,10 +536,13 @@ function initStoredData() {
             $(`#oldDataStoredInStaticFile`).append(table);
             console.log("APEDDED")
         }
-        // end each the sheets
-        dateCellDetactor();
+        counter++;
+        /** in case the each loop finished it starts to emplimant other functions */
+        if (length == counter) {
+            // end each the sheets
+            dateCellDetactor();
+        }
     });
-
 }
 
 /** on dropdown menu selector */
@@ -549,7 +559,6 @@ function onRemoveSelectItem(removedValue, removedText, $removedChoice) {
 /** add popup to row free HTML code */
 function addPopupContent(row) {
     var sheetName = $(row).attr("sheetName");
-
     $(row).popup({
         html: $(getCellNamesAsHTML()),
         inline: true,
@@ -578,11 +587,8 @@ function addPopupContent(row) {
 function dateCellDetactor() {
     var allCells = $(`[cell]`);
     var thisYear = new Date().getFullYear();
-
+    var length = allCells.length;
     allCells.each((i, e) => {
-        if ($(e).attr("DO")) {
-            return false;
-        }
         if ($(e).text().match(regularEx.dates) || $(e).text().match(regularEx.datesPoints)) {
 
             /** repace the sign in between the numbers to one modal */
@@ -641,9 +647,11 @@ function dateCellDetactor() {
             $(e).text(replacedDate);
             $(e).attr("DO", true);
         }
-
+        /** after finishing the each loop */
+        if (length === i + 1) {
+            compairTheDate();
+        }
     });
-    compairTheDate();
 }
 
 /** to compair the rows */
@@ -657,6 +665,7 @@ function compairTheDate() {
     var delivery_dateColumn = $(`td[cell="${D}"]`);
     var order_numberColumn = $(`td[cell="${F}"]`);
 
+
     // each all cell which contain date
     delivery_dateColumn.each((i, D) => {
         var rowID = $(D).parent().attr("id");
@@ -667,23 +676,30 @@ function compairTheDate() {
         var contracts_termInDay = (contracts_term * 30);
         var contracts_termInDMonth = contracts_term;
         var DA = Date.parse(dateToday) + contracts_termInMS;
-        console.log(contracts_termInDay);
+        console.log(new Date(DA));
     });
-
-
 }
 
 
 /** the static file table row click action */
 function secounderyTableRowClick(event) {
+    console.log($(this).parent().parent());
     if (event.altKey && event.ctrlKey) {
         var F = createOrOpenFile("staticData.json");
-        $(this).remove();
+        var sheetName = $(this).attr("sheetname");
+        var rowID = $(this).attr("id");
+        F[sheetName][$(this).attr("id")]
+        delete F[sheetName][rowID];
+        writeNewDataToFile("staticData.json", F);
         // i have to remove this object from file
+        $(this).transition('zoom');
+        if (Object.keys(F[sheetName]).length === 1) {
+            $(this).parent().parent().remove();
+        }
     }
 }
 
-  
+
 /** age range > 6570 && < 36500 Days*/
 /** Contracts term range 1095 . Alarm Range  */
 var regularEx = {
