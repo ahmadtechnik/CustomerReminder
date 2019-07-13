@@ -1,8 +1,30 @@
 var XLSX = require("xlsx");
 var FS = require("fs");
 var PATH = require("path");
+// add new funciton To jQuery 
+$.eachSync = (obj, resu, end, onStart) => {
+    if (onStart !== undefined) {
+        onStart(obj)
+    }
+    var objLength = 0;
+    if (obj.length === undefined) {
+        objLength = Object.keys(obj).length;
+    } else {
+        objLength = obj.length - 1;
+    };
+    
+    var counter = 0;
+    $.each(obj, (i, v) => {
+        resu(i, v);
+        counter++;
+        if (counter === objLength) {
+            end(obj);
+        }
+    });
+}
 //
 $(document).ready(() => {
+
     //
     $(`.dropdown`).dropdown({
         onChange: onCellCleanerChange,
@@ -21,6 +43,7 @@ $(document).ready(() => {
     $('#uploadFileAccordion').accordion();
     //
     initStoredData()
+
 });
 
 var SELECT_CLASS = ["ui", "segment", "teal", "inverted", "basic"];
@@ -31,10 +54,12 @@ var SHOW_CSS_CLASS = {
     "display": ""
 };
 
+var FILEDATA = [];
 
-function onFileUploadedAction(event) {
+function onFileUploadedAction() {
     var file = this.files[0];
     var thisBtn = this;
+    // in case was the file not equals undefined
     if (file !== undefined) {
         $(`#uploadedFileName`).text(file.name);
         var fileReader = new FileReader();
@@ -43,164 +68,176 @@ function onFileUploadedAction(event) {
             var xlsxFile = XLSX.read(file, {
                 type: "array"
             }).Sheets;
+            // each file's sheets
+            $.eachSync(xlsxFile, (index, sheet) => {
+                    var jsonSheet = XLSX.utils.sheet_to_json(sheet);
+                    FILEDATA.push(jsonSheet);
+                    if (jsonSheet.length > 0) {
+                        /**
+                         * add new sheet object to json file
+                         */
+                        var sheetName = sheet["!ref"];
+                        var sheetHeader = [];
 
-            $.each(xlsxFile, (index, sheet) => {
-                var jsonSheet = XLSX.utils.sheet_to_json(sheet);
-                if (jsonSheet.length > 0) {
+                        var html = XLSX.utils.sheet_to_html(sheet, {
+                            editable: false,
+                        });
+                        // get table from HTML
+                        var table = $($(html)[2]);
 
-                    /**
-                     * add new sheet object to json file
-                     */
-                    var sheetName = sheet["!ref"];
-                    var sheetHeader = [];
+                        // create new table
+                        var tableE = $(`<table class="ui celled single line striped  table"></table>`);
+                        var tableHead = $(`<thead></thead>`);
+                        var tableBody = $(`<tbody></thead>`);
+                        // get first row of the table
+                        var tableHeader = table.find("tbody").find("tr")[0];
+                        /** replace the td with th to make the first row as header */
+                        var ColumnsIndexes = {};
+                        $(tableHeader).find("td").each((i, v) => {
+                            /** write table head */
+                            $(v).replaceWith(`<th hcell="${i}">${v.textContent}-${i}</th>`);
+                            ColumnsIndexes[i] = $(v).text();
+                            // push the header cells to header file
+                            sheetHeader.push($(v).text());
+                        });
 
-                    var html = XLSX.utils.sheet_to_html(sheet, {
-                        editable: false,
-                    });
-                    // get table from HTML
-                    var table = $($(html)[2]);
-
-                    // create new table
-                    var tableE = $(`<table class="ui celled single line striped  table"></table>`);
-                    var tableHead = $(`<thead></thead>`);
-                    var tableBody = $(`<tbody></thead>`);
-                    // get first row of the table
-                    var tableHeader = table.find("tbody").find("tr")[0];
-                    /** replace the td with th to make the first row as header */
-                    var ColumnsIndexes = {};
-                    $(tableHeader).find("td").each((i, v) => {
-                        /** write table head */
-                        $(v).replaceWith(`<th hcell="${i}">${v.textContent}-${i}</th>`);
-                        ColumnsIndexes[i] = $(v).text();
-                        // push the header cells to header file
-                        sheetHeader.push($(v).text());
-                    });
-
-                    // check if this sheet exist in the file
-                    var F = createOrOpenFile("staticData.json");
-                    if (F[sheetName] === undefined) {
-                        F[sheetName] = {
-                            tableHeader: sheetHeader
-                        }
-                        writeNewDataToFile("staticData.json", F);
-                    } else {
-                        // in case this sheet was exist in file
-                    }
-
-                    // append all rows without header
-                    table.find("tbody").find("tr").each((index, row) => {
-                        /** assign new attributes to row data */
-                        if (index !== 0 && $(row).children().length > 0) {
-                            $(row).attr("sheetName", sheet["!ref"]);
-                            tableBody.append(row);
-                            $(row).click(secounderyTableRowClick);
-                        }
-                        /** detect if row is empty */
-                        var rowDR = $(row).find("td");
-                        var rowDRDS = $(row).find("[t='z']");
-
-                        if (rowDR.length === rowDRDS.length) {
-                            row.remove()
+                        // check if this sheet exist in the file
+                        var F = createOrOpenFile("staticData.json");
+                        if (F[sheetName] === undefined) {
+                            F[sheetName] = {
+                                tableHeader: sheetHeader
+                            }
+                            writeNewDataToFile("staticData.json", F);
                         } else {
-                            /** set row id from index num 1 */
-                            if ($(row).find("td")[1].textContent !== "") {
+                            // in case this sheet was exist in file
+                        }
 
-                                $(row).attr("id", $(row).find("td")[1].textContent);
-                                // in case the row eixt in static file
-                                var F = createOrOpenFile("staticData.json");
-                                if (F[sheetName][$(row).find("td")[1].textContent] !== undefined) {
-                                    $(row).addClass("disabled")
+                        // append all rows without header
+                        table.find("tbody").find("tr").each((index, row) => {
+
+                            /** assign new attributes to row data */
+                            if (index !== 0 && $(row).children().length > 0) {
+                                $(row).attr("sheetName", sheet["!ref"]);
+                                tableBody.append(row);
+                                $(row).click(secounderyTableRowClick);
+                            }
+                            /** detect if row is empty */
+                            var rowDR = $(row).find("td");
+                            var rowDRDS = $(row).find("[t='z']");
+
+                            if (rowDR.length === rowDRDS.length) {
+                                row.remove()
+                            } else {
+                                /** set row id from index num 1 */
+                                if ($(row).find("td")[1].textContent !== "") {
+
+                                    $(row).attr("id", $(row).find("td")[1].textContent);
+                                    // in case the row eixt in static file
+                                    var F = createOrOpenFile("staticData.json");
+                                    if (F[sheetName][$(row).find("td")[1].textContent] !== undefined) {
+                                        $(row).addClass("disabled")
+                                    }
                                 }
                             }
-                        }
-                        /** detect all emails and phone numbers/Emails date of birth and */
-                        if ($(row).children().length > 0 && index !== 0) {
+                            /** detect all emails and phone numbers/Emails date of birth and */
+                            if ($(row).children().length > 0 && index !== 0) {
 
-                            var children = $(row).children();
-                            /** each row cell */
-                            children.each((index, chiled) => {
-                                /** check number mach */
-                                $(chiled).attr("cell", index);
-                                var machPhone = chiled.textContent.match(regularEx.MobileWithCountryCode);
-                                var machEmail = chiled.textContent.match(regularEx.EmailAddress);
-                                var machDate = chiled.textContent.match(regularEx.dates);
-                                var datesPoints = chiled.textContent.match(regularEx.datesPoints);
-                                /** detect Phone Number */
-                                if (machPhone) {
-                                    if (index === 9) {
-                                        /** repace white space */
-                                        $(chiled).text($(chiled).text().replace(/[\s]/g, ""))
-                                        $(chiled).attr("action", "sendSMS");
-                                        $(chiled).attr("number", chiled.textContent);
-                                        $(chiled).addClass(["cursor"]);
+                                var children = $(row).children();
+                                /** each row cell */
+                                $.eachSync(children, (index, chiled) => {
+                                    /** check number mach */
+                                    $(chiled).attr("cell", index);
 
-                                        $(chiled).css({
-                                            background: "#0f3d0f",
-                                            color: "white"
-                                        });
+                                    var machPhone = chiled.textContent.match(regularEx.MobileWithCountryCode);
+                                    var machEmail = chiled.textContent.match(regularEx.EmailAddress);
+                                    var machDate = chiled.textContent.match(regularEx.dates);
+                                    var datesPoints = chiled.textContent.match(regularEx.datesPoints);
+                                    /** detect Phone Number */
+                                    if (machPhone) {
+                                        if (index === 9) {
+                                            /** repace white space */
+                                            $(chiled).text($(chiled).text().replace(/[\s]/g, ""))
+                                            $(chiled).attr("action", "sendSMS");
+                                            $(chiled).attr("number", chiled.textContent);
+                                            $(chiled).addClass(["cursor"]);
+
+                                            $(chiled).css({
+                                                background: "#0f3d0f",
+                                                color: "white"
+                                            });
+                                        }
                                     }
-                                }
-                                /** start detect Email address */
-                                if (machEmail) {
-                                    $(chiled).append("<br><a class='item'>Email</a>");
-                                    $(chiled).addClass("warning");
-                                    $(chiled).addClass(["positive", "cursor"]);
-                                }
-                                /** detect all dates in the table */
-                                if (machDate || datesPoints) {
-                                    var DataInTable = Date.parse(chiled.textContent);
-                                    var DateToday = new Date();
-                                    var Difrant = Date.parse(DateToday) - DataInTable;
-                                    var diffDays = Math.floor(Difrant / (1000 * 60 * 60 * 24));
-                                    var diffYears = Math.floor(Difrant / (1000 * 60 * 60 * 24 * 365.25));
-                                    var diffMonthes = Math.floor(Difrant / (1000 * 60 * 60 * 24 * 30));
-                                    /** select spacific Cell index  index === 3*/
-                                    if (index === 3) {
-                                        $(chiled).css({
-                                            background: "#ff9966",
-                                            color: "white"
-                                        });
-                                        /** add since attrbute to row */
-                                        $(chiled).parent().attr("since", diffDays);
-                                        /** add class to make this elemnt corsur */
-                                        $(chiled).addClass("cursor");
-                                        /** add on click event to this cell */
+                                    /** start detect Email address */
+                                    if (machEmail) {
+                                        $(chiled).append("<br><a class='item'>Email</a>");
+                                        $(chiled).addClass("warning");
+                                        $(chiled).addClass(["positive", "cursor"]);
+                                    }
+                                    /** detect all dates in the table */
+                                    if (machDate || datesPoints) {
+                                        var DataInTable = Date.parse(chiled.textContent);
+                                        var DateToday = new Date();
+                                        var Difrant = Date.parse(DateToday) - DataInTable;
+                                        var diffDays = Math.floor(Difrant / (1000 * 60 * 60 * 24));
+                                        var diffYears = Math.floor(Difrant / (1000 * 60 * 60 * 24 * 365.25));
+                                        var diffMonthes = Math.floor(Difrant / (1000 * 60 * 60 * 24 * 30));
+                                        /** select spacific Cell index  index === 3*/
+                                        if (index === 3) {
+                                            $(chiled).css({
+                                                background: "#ff9966",
+                                                color: "white"
+                                            });
+                                            /** add since attrbute to row */
+                                            $(chiled).parent().attr("since", diffDays);
+                                            /** add class to make this elemnt corsur */
+                                            $(chiled).addClass("cursor");
+                                            /** add on click event to this cell */
+                                            $(chiled).click(onCellClickAction);
+                                        }
+                                        /** in case the field was an date of birth */
+                                        else if (index === 8) {
+                                            if (datesPoints) {
+                                                /** replace the point with slash */
+                                                $(chiled).text($(chiled).text().replace(/[.]/g, "/"));
+                                            }
+                                            $(chiled).css({
+                                                background: "#33cc33",
+                                                color: "white"
+                                            });
+                                        }
+                                    }
+                                    /** add action to first cell in the table */
+                                    if (index === 0 && chiled.textContent !== "") {
+                                        $(chiled).addClass(["costumerModalShow", "firstCell"]);
+                                        /** add cell click event */
                                         $(chiled).click(onCellClickAction);
                                     }
-                                    /** in case the field was an date of birth */
-                                    else if (index === 8) {
-                                        if (datesPoints) {
-                                            /** replace the point with slash */
-                                            $(chiled).text($(chiled).text().replace(/[.]/g, "/"));
-                                        }
-                                        $(chiled).css({
-                                            background: "#33cc33",
-                                            color: "white"
-                                        });
-                                    }
-                                }
-                                /** add action to first cell in the table */
-                                if (index === 0 && chiled.textContent !== "") {
-                                    $(chiled).addClass(["costumerModalShow", "firstCell"]);
-                                    /** add cell click event */
-                                    $(chiled).click(onCellClickAction);
-                                }
-                            });
-                            addPopupContent(row);
-                        }
-                    });
-                    tableHead.append(tableHeader);
-                    tableE.append(tableHead);
-                    tableE.append(tableBody);
-                    var clearThisTableBtn = $(`<div class="ui button top attached red fullWidth">Remove Table</div>`);
-                    clearThisTableBtn.click(() => {
-                        $(thisBtn).val("");
-                        $(`#sheetsContainer`).html("");
-                        $(thisBtn).change();
-                    });
-                    $(`#sheetsContainer`).html([clearThisTableBtn, tableE]);
-                }
-            });
+                                }, (obj) => {
+
+                                });
+                                $(row).css(HIDE_CSS_CLASS)
+                            }
+                        });
+                        tableHead.append(tableHeader);
+                        tableE.append(tableHead);
+                        tableE.append(tableBody);
+                        var clearThisTableBtn = $(`<div class="ui button top attached red fullWidth">Remove Table</div>`);
+                        clearThisTableBtn.click(() => {
+                            $(thisBtn).val("");
+                            $(`#sheetsContainer`).html("");
+                            $(thisBtn).change();
+                        });
+                        $(`#sheetsContainer`).html([clearThisTableBtn, tableE]);
+                    }
+                },
+                // after each finish
+                (obj) => {
+                    $("body").removeClass(["loading", "ui", "segment"]);
+                }, // before each starts
+                (obj) => {
+                    $("body").addClass(["loading", "ui", "segment"]);
+                });
+            // end each the file's sheets
         };
         fileReader.readAsArrayBuffer(file);
         //var read = XLSX.read(file);
@@ -217,6 +254,12 @@ function onFileUploadedAction(event) {
 function onSearchFieldsKeyDown(event) {
     var by = parseInt($(this).attr("by"));
     var tableRows = $(`.sheetsContainer table tbody tr`);
+    var searchBy = {
+        1: "Auftr.-Nr.",
+        6: "Kunden",
+        10: "Zählernummer",
+        11: "Tarif/Produkt"
+    };
 
     if (tableRows.length === 0) {
         /** to check if the static data table is exist */
@@ -229,6 +272,41 @@ function onSearchFieldsKeyDown(event) {
     }
     var interedValue = $(this).val().toLowerCase();
     if (event.keyCode === 13) {
+        /** check if the  */
+        if (FILEDATA.length !== 0) {
+
+            $.each(FILEDATA, (i, sheet) => {
+                var existINFIRST = false;
+                $.each(sheet, (i, row) => {
+                    var searchByKey = searchBy[by];
+                    var contains = row[searchByKey];
+                    var rowIDtoShow = row[searchBy[1]];
+                    if (contains.toString().includes(interedValue)) {
+                        existINFIRST = true;
+                        $(`.sheetsContainer tr[id="${rowIDtoShow}"]`).css(SHOW_CSS_CLASS);
+                    } else {
+                        $(`.sheetsContainer tr[id="${rowIDtoShow}"]`).css(HIDE_CSS_CLASS);
+                    }
+                });
+            });
+        }
+        /** in case the row was exist in other row */
+        if (STATICFILEROWS.length !== 0) {
+            if (STATICFILEROWS.length !== 0) {
+                $.each(STATICFILEROWS, (i, sheet) => {
+                    $.each(sheet, (i, row) => {
+                        if (i !== "tableHeader") {
+                            if (row[by].toString().includes(interedValue)) {
+                                $(`tr[id="${row[1]}"]`).css(SHOW_CSS_CLASS);
+                            } else {
+                                $(`tr[id="${row[1]}"]`).css(HIDE_CSS_CLASS);
+                            }
+                        }
+                    })
+                });
+            }
+        }
+        /*
         tableRows.each((i, row) => {
             $(row).find("td").each((i, cell) => {
                 if (i === by) {
@@ -246,16 +324,18 @@ function onSearchFieldsKeyDown(event) {
                 }
             });
         });
+        */
         $(this).select();
     }
     if (interedValue === "") {
-        tableRows.css(SHOW_CSS_CLASS);
+        // tableRows.css(SHOW_CSS_CLASS);
     }
 }
 /** 
  * 
  */
-function onSearchFieldFucosout(event) {
+function onSearchFieldFucosout() {
+    return;
     var tableRows = $(`.sheetsContainer table tbody tr`);
     var by = parseInt($(this).attr("by"));
     if (tableRows.length === 0) {
@@ -283,6 +363,8 @@ function onSearchFieldFucosout(event) {
  * 
  */
 function onSearchFieldFucosIn(event) {
+
+    return;
     var by = parseInt($(this).attr("by"));
     var tableRows = $(`.sheetsContainer table tbody tr`);
     if (tableRows.length === 0) {
@@ -307,8 +389,7 @@ function onSearchFieldFucosIn(event) {
         });
 
     });
-
-
+    //
     if (interedValue === "") {
         tableRows.css(SHOW_CSS_CLASS);
     }
@@ -492,6 +573,8 @@ function writeNewDataToFile(fileName, data) {
 }
 
 /** init the existed Data in table on app starts or page refreshed */
+var STATICFILEROWS = [];
+
 function initStoredData() {
     $(`#oldDataStoredInStaticFile`).html("");
     var F = createOrOpenFile("staticData.json");
@@ -499,7 +582,7 @@ function initStoredData() {
     var counter = 0;
     // each all sheets in static file
     $.each(F, (i, sheet) => {
-
+        STATICFILEROWS.push(sheet);
         var sheetName = i;
         var table = $(`<table class="ui single line table striped " id="${sheetName}"></table>`);
         var tableHead = $(`<thead></thead>`);
@@ -654,7 +737,7 @@ function dateCellDetactor() {
         }
         /** after finishing the each loop */
         if (length === i + 1) {
-            console.log("FINISH")
+
             compairTheDate();
         }
     });
@@ -728,7 +811,7 @@ function compairTheDate() {
                 td.transition('set looping').transition('pulse', '500ms');
             } else if (DBTaDD < 0) {
                 td.addClass("POSITIVE");
-                console.log("add")
+
             }
 
             addPopupContent($(`#${rowID}`));
