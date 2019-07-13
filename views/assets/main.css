@@ -43,3 +43,32 @@
     background: "#ff9966";
     color: "white";
 }
+
+.oldDataStoredInStaticFile,
+.sheetsContainer {
+    overflow-x: scroll;
+}
+
+.importantHeader {
+    background: red !important;
+    color: white !important;
+}
+
+.ui.popup {
+    overflow: auto !important;
+}
+
+.DENG {
+    background-color: Tomato !important;
+    color: white !important;
+}
+
+.WORN {
+    background-color:Orange !important;
+    color: white !important;
+}
+
+.POSITIVE {
+    background-color: MediumSeaGreen !important;
+    color: white !important
+}

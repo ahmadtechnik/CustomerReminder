@@ -61,7 +61,7 @@ function onFileUploadedAction(event) {
                     var table = $($(html)[2]);
 
                     // create new table
-                    var tableE = $(`<table class="ui celled  very compacttable table"></table>`);
+                    var tableE = $(`<table class="ui celled single line striped  table"></table>`);
                     var tableHead = $(`<thead></thead>`);
                     var tableBody = $(`<tbody></thead>`);
                     // get first row of the table
@@ -104,11 +104,12 @@ function onFileUploadedAction(event) {
                         } else {
                             /** set row id from index num 1 */
                             if ($(row).find("td")[1].textContent !== "") {
-                                var otherRowWithSameID = $(`tr[id="${$(row).find("td")[1].textContent}"]`);
+
                                 $(row).attr("id", $(row).find("td")[1].textContent);
-                                // in case the same row exist in other table
-                                if (otherRowWithSameID.length >= 1) {
-                                    $(row).addClass("disabled");
+                                // in case the row eixt in static file
+                                var F = createOrOpenFile("staticData.json");
+                                if (F[sheetName][$(row).find("td")[1].textContent] !== undefined) {
+                                    $(row).addClass("disabled")
                                 }
                             }
                         }
@@ -188,17 +189,16 @@ function onFileUploadedAction(event) {
                             addPopupContent(row);
                         }
                     });
-
                     tableHead.append(tableHeader);
                     tableE.append(tableHead);
                     tableE.append(tableBody);
-                    var clearThisTableBtn = $(`<div class="ui button top attached red">Remove Table</div>`);
+                    var clearThisTableBtn = $(`<div class="ui button top attached red fullWidth">Remove Table</div>`);
                     clearThisTableBtn.click(() => {
                         $(thisBtn).val("");
                         $(`#sheetsContainer`).html("");
                         $(thisBtn).change();
                     });
-                    $(`#sheetsContainer`).append([clearThisTableBtn, tableE]);
+                    $(`#sheetsContainer`).html([clearThisTableBtn, tableE]);
                 }
             });
         };
@@ -295,14 +295,19 @@ function onSearchFieldFucosIn(event) {
         }
     }
     var interedValue = $(this).val().toLowerCase();
+
     tableRows.each((i, row) => {
         $(row).find("td").each((i, cell) => {
             if (i === by) {
                 $(cell).removeClass(SELECT_CLASS).addClass(SELECT_CLASS);
-
+                var scrolled = $(cell).closest("div").scrollLeft();
+                var offsetOfCell = $(cell).offset().left;
+                $(cell).closest("div").scrollLeft((offsetOfCell / 2) + $(cell).width());
             }
         });
+
     });
+
 
     if (interedValue === "") {
         tableRows.css(SHOW_CSS_CLASS);
@@ -475,6 +480,7 @@ function createOrOpenFile(fileName) {
         createOrOpenFile(fileName);
     }
 }
+
 /** write new data to file */
 function writeNewDataToFile(fileName, data) {
     var path = PATH.join(__dirname, "..", fileName);
@@ -495,7 +501,7 @@ function initStoredData() {
     $.each(F, (i, sheet) => {
 
         var sheetName = i;
-        var table = $(`<table class="ui single line very compacttable table fixed" id="${sheetName}"></table>`);
+        var table = $(`<table class="ui single line table striped " id="${sheetName}"></table>`);
         var tableHead = $(`<thead></thead>`);
         var tableBody = $(`<tbody></tbody>`);
         var containData = false;
@@ -534,7 +540,6 @@ function initStoredData() {
         if (containData) {
             table.append([tableHead, tableBody]);
             $(`#oldDataStoredInStaticFile`).append(table);
-            console.log("APEDDED")
         }
         counter++;
         /** in case the each loop finished it starts to emplimant other functions */
@@ -558,6 +563,7 @@ function onRemoveSelectItem(removedValue, removedText, $removedChoice) {
 
 /** add popup to row free HTML code */
 function addPopupContent(row) {
+    return false;
     var sheetName = $(row).attr("sheetName");
     $(row).popup({
         html: $(getCellNamesAsHTML()),
@@ -581,7 +587,6 @@ function addPopupContent(row) {
         });
         return HTML;
     }
-
 }
 
 function dateCellDetactor() {
@@ -649,41 +654,96 @@ function dateCellDetactor() {
         }
         /** after finishing the each loop */
         if (length === i + 1) {
+            console.log("FINISH")
             compairTheDate();
         }
     });
 }
 
+
 /** to compair the rows */
 function compairTheDate() {
+
     /** start to compair dates */
     var D = 19;
     var E = 20;
     var F = 1;
     var dateToday = new Date();
-    var contracts_termColumn = $(`td[cell="${E}"]`);
-    var delivery_dateColumn = $(`td[cell="${D}"]`);
-    var order_numberColumn = $(`td[cell="${F}"]`);
+    var contracts_termColumn = $(`#oldDataStoredInStaticFile td[cell="${E}"]`);
+    var delivery_dateColumn = $(`#oldDataStoredInStaticFile td[cell="${D}"]`);
+    var order_numberColumn = $(`#oldDataStoredInStaticFile td[cell="${F}"]`);
 
+
+    /** start append the new column to the parent table */
+    var parentTable = $(contracts_termColumn).closest("table");
+
+
+    if (parentTable.find("thead").find("tr").find("[cell='-1']").length < 1) {
+        parentTable.find("thead").find("tr").append("<th class='importantHeader' cell='-1'>IMP</th>");
+    } else {
+
+    }
 
     // each all cell which contain date
     delivery_dateColumn.each((i, D) => {
         var rowID = $(D).parent().attr("id");
-        var delivery_date = $(D).text();
-        var contracts_term = contracts_termColumn[i].textContent;
-        // diffrance days in MS
-        var contracts_termInMS = (contracts_term * 30) * (1000 * 60 * 60 * 24);
-        var contracts_termInDay = (contracts_term * 30);
-        var contracts_termInDMonth = contracts_term;
-        var DA = Date.parse(dateToday) + contracts_termInMS;
-        console.log(new Date(DA));
+        var checkIfCellExist = $(`#oldDataStoredInStaticFile #${rowID}`).find(`td[hCell='IMP']`);
+        /** in case was the cell which contain the leaft time on */
+        if (checkIfCellExist.length < 1) {
+            var v = new Date();
+
+            var delivery_date = $(D).text().split("-");
+            var day = parseInt(delivery_date[0]);
+            var month = parseInt(delivery_date[1]);
+            var year = parseInt(delivery_date[2]);
+            var dToDateObject = new Date(year + "-" + month + "-" + day);
+
+            var contracts_term = contracts_termColumn[i].textContent;
+            // diffrance days in MS
+            var contracts_termInMS = (contracts_term * 30) * (1000 * 60 * 60 * 24);
+            var contracts_termInDay = (contracts_term * 30);
+            var contracts_termInDMonth = contracts_term;
+
+            var DA = Date.parse(dateToday) + contracts_termInMS;
+            var leaft = DA - Date.parse(dateToday);
+
+            var DBTaDD = Math.floor((Date.parse(dateToday) - Date.parse(dToDateObject)) / (1000 * 60 * 60 * 24));
+
+
+            var leaftD = leaft / (1000 * 60 * 60 * 24) - DBTaDD;
+            var leaftM = leaft / (1000 * 60 * 60 * 24 * 30);
+            // in case the contract is not starts yet
+            if (DBTaDD < 0) {
+                var td = $(`<td hCell="IMP" >${Math.abs(DBTaDD)} T</td>`);
+                $(`#oldDataStoredInStaticFile #${rowID}`).append(td);
+            } else {
+                var td = $(`<td hCell="IMP">${leaftD} D</td>`);
+                $(`#oldDataStoredInStaticFile #${rowID}`).append(td);
+            }
+            // to detect soon finishing term of any cotract
+            if (leaftD > 90 && leaftD <= 180) {
+                td.addClass("WORN");
+            } else if (leaftD < 90) {
+                td.addClass("DENG");
+                td.transition('set looping').transition('pulse', '500ms');
+            } else if (DBTaDD < 0) {
+                td.addClass("POSITIVE");
+                console.log("add")
+            }
+
+            addPopupContent($(`#${rowID}`));
+        } else {
+            console.log("CELL EXIST IT SHOULD TO UPDATE ONLY");
+        }
+
     });
+    appendedOne = true;
+
 }
 
 
 /** the static file table row click action */
 function secounderyTableRowClick(event) {
-    console.log($(this).parent().parent());
     if (event.altKey && event.ctrlKey) {
         var F = createOrOpenFile("staticData.json");
         var sheetName = $(this).attr("sheetname");
@@ -692,9 +752,21 @@ function secounderyTableRowClick(event) {
         delete F[sheetName][rowID];
         writeNewDataToFile("staticData.json", F);
         // i have to remove this object from file
-        $(this).transition('zoom');
+        $(this).transition({
+            animation: 'horizontal flip',
+            onComplete: () => {
+                $(this).remove();
+                $(`#uploadeFileHiddenBtn`).change();
+            }
+        });
         if (Object.keys(F[sheetName]).length === 1) {
-            $(this).parent().parent().remove();
+            $(this).parent().parent().transition({
+                animation: 'horizontal flip',
+                onComplete: () => {
+                    $(this).parent().parent().remove();
+                    $(`#uploadeFileHiddenBtn`).change();
+                }
+            })
         }
     }
 }
