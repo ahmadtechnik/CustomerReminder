@@ -12,7 +12,9 @@ $.eachSync = (obj, resu, end, start) => {
         resu(i, v);
         objLength--;
         if (objLength <= 0) {
-            end && end(obj);
+            if (end) {
+                end(obj, i);
+            }
         }
     });
 }
@@ -48,7 +50,7 @@ var SHOW_CSS_CLASS = {
     "display": ""
 };
 
-var FILEDATA = [];
+var FILEDATA = {};
 
 function onFileUploadedAction() {
     var file = this.files[0];
@@ -66,10 +68,23 @@ function onFileUploadedAction() {
             $.eachSync(xlsxFile, (index, sheet) => {
                 var jsonSheet = XLSX.utils.sheet_to_json(sheet);
                 /** DEPRECATED FUNCTION WAS HERE */
-                FILEDATA.push(jsonSheet);
-                console.log(jsonSheet);
-            }, () => {
 
+                // check if this sheet exist in the file
+                var sheetName = sheet["!ref"];
+                var sheetHeader = Object.keys(jsonSheet[0]);
+                var F = createOrOpenFile("staticData.json");
+                if (F[sheetName] === undefined) {
+                    F[sheetName] = {
+                        tableHeader: sheetHeader
+                    }
+                    writeNewDataToFile("staticData.json", F);
+                } else {
+                    // in case this sheet was exist in file
+                }
+                FILEDATA[sheetName] = jsonSheet;
+
+            }, (xlsxFile) => {
+                console.log(FILEDATA);
                 //$(`#sheetsContainer`).html();
                 $('#uploadFileAccordion').accordion("close", 0);
             });
@@ -98,7 +113,7 @@ function onSearchFieldsKeyDown(event) {
     if (tableRows.length === 0) {
         /** to check if the static data table is exist */
         var tableRows = $(`.oldDataStoredInStaticFile table tbody tr`);
-        if (tableRows.length === 0) {
+        if (Object.keys(FILEDATA).length < 1 || STATICFILEROWS.length < 1) {
             $('#uploadFileAccordion').accordion("open", 0);
             $(`#topFileUploaderSeciton`).transition('pulse');
             return false;
@@ -106,11 +121,13 @@ function onSearchFieldsKeyDown(event) {
     }
     var interedValue = $(this).val().toLowerCase();
     if (event.keyCode === 13) {
-        /** check if the  */
-        if (FILEDATA.length > 0) {
+        /** check if the search result exist into uploaded file */
+        if (Object.keys(FILEDATA).length > 0) {
             var foundedCountr = 0;
-            var foundedItems = [];
-            $.eachSync(FILEDATA, (i, sheet) => {
+            var foundedItems = {};
+            console.log(Object.keys(FILEDATA).length)
+            $.eachSync(FILEDATA, (sheetName, sheet) => {
+                foundedItems[sheetName] = [];
                 $.eachSync(sheet, (i, row) => {
                     var searchByKey = searchBy[by];
                     var contains = row[searchByKey];
@@ -118,14 +135,15 @@ function onSearchFieldsKeyDown(event) {
                     if (contains.toString().includes(interedValue)) {
                         //$(`.sheetsContainer tr[id="${rowIDtoShow}"]`).css(SHOW_CSS_CLASS);
                         if (foundedCountr < 3) {
-                            foundedItems.push(row);
+                            foundedItems[sheetName].push(row);
                         }
                         foundedCountr++;
                     } else {
                         // in case search word does not mach any value
                     }
                 });
-            }, (sheet) => {
+            }, (sheet, key) => {
+
                 if (foundedCountr < 1) {
                     $(`#sheetsContainer`).html("<h1 class='ui header center alignd'>THERE IS NO RESULT...</h1>");
                 } else if (foundedCountr > 1) {
@@ -138,10 +156,9 @@ function onSearchFieldsKeyDown(event) {
                     var tableBody = $(`<tbody></tbody>`);
                     var tableHeader = Object.keys(foundedItems[0]);
                     /** each header of the table */
-                    console.log("tableHeader length : ", tableHeader.length);
                     $.eachSync(tableHeader, (i, v) => {
                         trHead.append(`<th hcell="${i}">${v}</th>`);
-                    }, () => {
+                    }, (tableHeader, lastIndex) => {
                         tableHead.append(trHead);
                         tableE.append(tableHead);
                         /** each row body */
@@ -156,19 +173,17 @@ function onSearchFieldsKeyDown(event) {
                                 tableBody.append(trBody);
                                 tableE.append(tableBody);
                             });
-                        }, () => {
+                        }, (foundedItems) => {
                             /** append table to search result area */
                             $(`#sheetsContainer`).html(tableE);
                         });
-
                     });
 
                 }
             });
         }
-
         /** in case the row was exist in other row */
-        if (STATICFILEROWS.length > 0) {
+        else if (STATICFILEROWS.length > 0) {
             if (STATICFILEROWS.length > 0) {
                 $.each(STATICFILEROWS, (i, sheet) => {
                     $.each(sheet, (i, row) => {
@@ -278,13 +293,13 @@ function onSearchFieldFucosIn(event) {
 var CHOOSED_ROW_TABLE_ID = "";
 
 function onCellClickAction(event) {
-   
+
     var currentRow = event.target.parentElement;
     var rowID = currentRow.getAttribute("id");
     var cellsInRow = $(currentRow).find("td");
     var tableHeader = cellsInRow.closest("table").find("thead").find("tr").find("th");
     CHOOSED_ROW_TABLE_ID = rowID;
-    
+
     console.log(rowID);
 
     var rowData = [];
@@ -767,7 +782,7 @@ function depr(params) {
         /**
          * add new sheet object to json file
          */
-        var sheetName = sheet["!ref"];
+
         var sheetHeader = [];
 
         var html = XLSX.utils.sheet_to_html(sheet, {
@@ -792,16 +807,6 @@ function depr(params) {
             sheetHeader.push($(v).text());
         });
 
-        // check if this sheet exist in the file
-        var F = createOrOpenFile("staticData.json");
-        if (F[sheetName] === undefined) {
-            F[sheetName] = {
-                tableHeader: sheetHeader
-            }
-            writeNewDataToFile("staticData.json", F);
-        } else {
-            // in case this sheet was exist in file
-        }
 
         // append all rows without header
         $.eachSync(table.find("tbody").find("tr"), (index, row) => {
