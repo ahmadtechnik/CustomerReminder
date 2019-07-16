@@ -64,11 +64,22 @@
 }
 
 .WORN {
-    background-color:Orange !important;
+    background-color: Orange !important;
     color: white !important;
 }
 
 .POSITIVE {
     background-color: MediumSeaGreen !important;
     color: white !important
+}
+
+.DENGL2 {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+.columnMerged{
+    background-color: #f54242 !important;
+    color: white !important;
+    text-align:  center !important;
 }

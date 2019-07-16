@@ -49,7 +49,7 @@ var HIDE_CSS_CLASS = {
 var SHOW_CSS_CLASS = {
     "display": ""
 };
-
+var LOADING = ["ui", "segment", "loading"];
 var FILEDATA = {};
 
 function onFileUploadedAction() {
@@ -57,16 +57,28 @@ function onFileUploadedAction() {
     var thisBtn = this;
     // in case was the file not equals undefined
     if (file !== undefined) {
+
         $(`#uploadedFileName`).text(file.name);
         var fileReader = new FileReader();
+
         fileReader.onload = (F) => {
-            var file = new Uint8Array(F.target.result);
-            var xlsxFile = XLSX.read(file, {
+            var array8bit = new Uint8Array(F.target.result);
+            var xlsxFile = XLSX.read(array8bit, {
                 type: "array"
             }).Sheets;
+
             // each file's sheets
             $.eachSync(xlsxFile, (index, sheet) => {
-                var jsonSheet = XLSX.utils.sheet_to_json(sheet);
+                var jsonSheet = XLSX.utils.sheet_to_json(sheet, {
+                    raw: false,
+                    //blankrows: false,
+                });
+                console.log(jsonSheet);
+                $.eachSync(jsonSheet, (sheet, row) => {
+                    $.eachSync(row, (i, cell) => {
+                        jsonSheet[sheet][i] = jsonSheet[sheet][i].toString("UTF-8")
+                    });
+                });
                 /** DEPRECATED FUNCTION WAS HERE */
 
                 // check if this sheet exist in the file
@@ -84,13 +96,19 @@ function onFileUploadedAction() {
                 FILEDATA[sheetName] = jsonSheet;
 
             }, (xlsxFile) => {
-                console.log(FILEDATA);
                 //$(`#sheetsContainer`).html();
                 $('#uploadFileAccordion').accordion("close", 0);
             });
             // end each the file's sheets
+            $(`body`).removeClass(LOADING);
         };
 
+        fileReader.onprogress = (FileReader, ProgressEvent) => {
+
+        };
+        fileReader.onloadstart = () => {
+            $(`body`).addClass(LOADING);
+        }
         fileReader.readAsArrayBuffer(file);
     } else {
         $(`#uploadedFileName`).text("No documents are listed for this customer.");
@@ -101,6 +119,7 @@ function onFileUploadedAction() {
  * 
  */
 function onSearchFieldsKeyDown(event) {
+    var F = createOrOpenFile("staticData.json");
     var by = parseInt($(this).attr("by"));
     var tableRows = $(`.sheetsContainer table tbody tr`);
     var searchBy = {
@@ -113,7 +132,7 @@ function onSearchFieldsKeyDown(event) {
     if (tableRows.length === 0) {
         /** to check if the static data table is exist */
         var tableRows = $(`.oldDataStoredInStaticFile table tbody tr`);
-        if (Object.keys(FILEDATA).length < 1 || STATICFILEROWS.length < 1) {
+        if (Object.keys(FILEDATA).length < 1 && STATICFILEROWS.length < 1) {
             $('#uploadFileAccordion').accordion("open", 0);
             $(`#topFileUploaderSeciton`).transition('pulse');
             return false;
@@ -125,7 +144,7 @@ function onSearchFieldsKeyDown(event) {
         if (Object.keys(FILEDATA).length > 0) {
             var foundedCountr = 0;
             var foundedItems = {};
-            console.log(Object.keys(FILEDATA).length)
+            var tableHeader = [];
             $.eachSync(FILEDATA, (sheetName, sheet) => {
                 foundedItems[sheetName] = [];
                 $.eachSync(sheet, (i, row) => {
@@ -136,6 +155,7 @@ function onSearchFieldsKeyDown(event) {
                         //$(`.sheetsContainer tr[id="${rowIDtoShow}"]`).css(SHOW_CSS_CLASS);
                         if (foundedCountr < 3) {
                             foundedItems[sheetName].push(row);
+                            tableHeader = Object.keys(row);
                         }
                         foundedCountr++;
                     } else {
@@ -143,7 +163,6 @@ function onSearchFieldsKeyDown(event) {
                     }
                 });
             }, (sheet, key) => {
-
                 if (foundedCountr < 1) {
                     $(`#sheetsContainer`).html("<h1 class='ui header center alignd'>THERE IS NO RESULT...</h1>");
                 } else if (foundedCountr > 1) {
@@ -154,31 +173,46 @@ function onSearchFieldsKeyDown(event) {
                     var tableHead = $(`<thead></thead>`);
                     var trHead = $(`<tr></tr>`);
                     var tableBody = $(`<tbody></tbody>`);
-                    var tableHeader = Object.keys(foundedItems[0]);
+                    // first child
                     /** each header of the table */
                     $.eachSync(tableHeader, (i, v) => {
                         trHead.append(`<th hcell="${i}">${v}</th>`);
-                    }, (tableHeader, lastIndex) => {
+                    }, (tableHeader) => {
                         tableHead.append(trHead);
                         tableE.append(tableHead);
                         /** each row body */
-                        $.eachSync(foundedItems, (i, row) => {
-                            var trBody = $(`<tr id="${row[searchBy[1]]}" ></tr>`);
-                            $.eachSync(row, (i, cell) => {
-                                var tr = $(`<td cell="${tableHeader.indexOf(i)}">${cell}</td>`);
-                                tr.click(onCellClickAction);
-                                trBody.append(tr);
-                            }, (row) => {
-                                /** append table row to table body */
-                                tableBody.append(trBody);
-                                tableE.append(tableBody);
+                        $.eachSync(foundedItems, (sheetname, sheet) => {
+                            $.eachSync(sheet, (i, row) => {
+                                var trBody = $(`<tr sheetname="${sheetname}" id="${row[searchBy[1]]}" ></tr>`);
+                                $.eachSync(row, (i, cell) => {
+                                    var td = $(`<td cell="${tableHeader.indexOf(i)}">${cell}</td>`);
+                                    td.click(onCellClickAction);
+                                    trBody.append(td);
+                                }, (row) => {
+                                    /** check if the drawed row not exist into static file */
+                                    if (F[sheetname][row[searchBy[1]]] !== undefined) {
+                                        trBody.addClass("disabled");
+                                    }
+                                    /** append table row to table body */
+                                    tableBody.append(trBody);
+                                    tableE.append(tableBody);
+                                });
+                            }, (sheet) => {
+
                             });
                         }, (foundedItems) => {
                             /** append table to search result area */
-                            $(`#sheetsContainer`).html(tableE);
+                            var clearThisTableBtn = $(`<div class="ui button top attached red fullWidth">Remove Table</div>`);
+                            clearThisTableBtn.click(() => {
+                                $(`#uploadeFileHiddenBtn`).val("");
+                                $(`#sheetsContainer`).html("");
+                                $(`#uploadeFileHiddenBtn`).change();
+                                FILEDATA = [];
+                            });
+                            $(`#sheetsContainer`).html([clearThisTableBtn, tableE]);
+                            dateCellDetactor();
                         });
                     });
-
                 }
             });
         }
@@ -399,9 +433,9 @@ function onInsertDataModalOnApprove(modal) {
         var oldDataStored = createOrOpenFile("staticData.json");
         var rowToWriteToFile = [];
         /** push the new values to row  */
-        $(`#${CHOOSED_ROW_TABLE_ID} td`);
+        $(`.sheetsContainer #${CHOOSED_ROW_TABLE_ID} td`);
         var sheetname = $(`#${CHOOSED_ROW_TABLE_ID}`).attr("sheetname");
-        $(`#${CHOOSED_ROW_TABLE_ID} td`).each((i, e) => {
+        $(`.sheetsContainer #${CHOOSED_ROW_TABLE_ID} td`).each((i, e) => {
             rowToWriteToFile.push($(e).text());
         });
 
@@ -420,7 +454,7 @@ function onInsertDataModalOnApprove(modal) {
                 oldDataStored[sheetname][CHOOSED_ROW_TABLE_ID] = rowToWriteToFile;
                 writeNewDataToFile("staticData.json", oldDataStored);
                 console.log("New Row Added to sheet object");
-                $(`#${CHOOSED_ROW_TABLE_ID}`).addClass("disabled");
+                $(`.sheetsContainer #${CHOOSED_ROW_TABLE_ID}`).addClass("disabled");
             } else {
                 // ask user if he would like to update the old data
                 console.log("THIS ROW IS  EXIST IN STATIC FILE");
@@ -449,11 +483,11 @@ function createOrOpenFile(fileName) {
     // in case was the json file exist
     if (fileExist) {
         return JSON.parse(FS.readFileSync(path, {
-            encoding: "utf8"
+            encoding: "UTF-8"
         }));
     } else {
         // in case the file was not exist i have to create it again
-        FS.writeFileSync(path, JSON.stringify({}), "utf8");
+        FS.writeFileSync(path, JSON.stringify({}), "UTF-8");
         createOrOpenFile(fileName);
     }
 }
@@ -462,9 +496,13 @@ function createOrOpenFile(fileName) {
 function writeNewDataToFile(fileName, data) {
     var path = PATH.join(__dirname, "..", fileName);
     if (typeof data === "object") {
-        FS.writeFileSync(path, JSON.stringify(data), "utf8");
+        FS.writeFileSync(path, JSON.stringify(data), {
+            encoding: "UTF-8"
+        });
     } else if (typeof data === "string") {
-        FS.writeFileSync(path, data, "utf8");
+        FS.writeFileSync(path, data, {
+            encoding: "UTF-8"
+        });
     }
 }
 
@@ -479,43 +517,66 @@ function initStoredData() {
     var table = $(`<table class="ui single line table striped " id=""></table>`);
     var tableHead = $(`<thead></thead>`);
     var tableBody = $(`<tbody></tbody>`);
-    var headerAdded = true;
+    var headerAdded = false;
+
     // each all sheets in static file
     $.eachSync(F, (i, sheet) => {
         STATICFILEROWS.push(sheet);
         var sheetName = i;
-
         var containData = false;
         var tableHeader = sheet["tableHeader"];
         // each current sheet
         if (Object.keys(sheet).length > 1) {
+            var headerLength = Object.keys(F[sheetName]["tableHeader"]).length;
             containData = true;
             $.each(sheet, (i, row) => {
                 // in case was the current row the table header
-                if (i === "tableHeader" && headerAdded) {
-
-                    var emptyTableRow = $(`<tr id="${sheetName}"></tr>`);
-                    $.each(row, (i, v) => {
-                        emptyTableRow.append(`<th cell="${i}" >${v}</th>`);
-                        $(`#cellFilter`).append(`<option value="${i}">${v}</option>`);
-                    });
-                    tableHead.append(emptyTableRow);
-                    headerAdded = false;
+                if (i === "tableHeader") {
+                    if (!headerAdded) {
+                        var emptyTableRow = $(`<tr id="${sheetName}"></tr>`);
+                        $.each(row, (i, v) => {
+                            emptyTableRow.append(`<th cell="${i}" >${v}</th>`);
+                            $(`#cellFilter`).append(`<option value="${i}">${v}</option>`);
+                        });
+                        tableHead.append(emptyTableRow);
+                        headerAdded = true;
+                    }
+                    /** in case the header of secoundery table was drawed */
+                    else {}
                 } else {
                     var emptyTableRow = $(`<tr class="" id="${i}" sheetName="${sheetName}" ></tr>`);
-                    $.each(row, (i, v) => {
-                        var datesPoints = v.match(regularEx.datesPoints);
-                        if (datesPoints) {
-                            /** replace the point with slash */
-                            v.replace(/[.]/g, "/");
-                        }
-                        emptyTableRow.append(`<td hCell="${tableHeader[i]}" cell="${i}" >${v}</td>`);
-                    });
-                    // add popup to sub data row of the table
-                    emptyTableRow.click(secounderyTableRowClick);
-                    tableBody.append(emptyTableRow);
-                    addPopupContent(emptyTableRow);
+                    var rowTableBodyLength = Object.keys(row).length;
+                    /** 
+                     * in case header length was not equals to table row body length 
+                     * here should be other to this row
+                     */
+                    if (rowTableBodyLength !== headerLength) {
+                        emptyTableRow =
+                            $(`<tr class="columnMerged" id="${i}" sheetName="${sheetName}" >
+                            <td colspan="${headerLength}">${row.join(" # ")}</td>
+                            </tr>`);
+                            tableBody.append(emptyTableRow);
+                            emptyTableRow.click(secounderyTableRowClick);
+                    } else {
+                        /**
+                         * each rows which are not table body
+                         */
+                        $.each(row, (i, v) => {
+                            var datesPoints = v.match(regularEx.datesPoints);
+                            if (datesPoints) {
+                                /** replace the point with slash */
+                                v.replace(/[.]/g, "/");
+                            }
+                            emptyTableRow.append(`<td hCell="${tableHeader[i]}" cell="${i}" >${v}</td>`);
+                        });
+                        // add popup to sub data row of the table
+                        emptyTableRow.click(secounderyTableRowClick);
+                        tableBody.append(emptyTableRow);
+                        addPopupContent(emptyTableRow);
+                    }
                 }
+            }, () => {
+
             });
 
         }
@@ -648,17 +709,14 @@ function dateCellDetactor() {
 
 /** to compair the rows */
 function compairTheDate() {
-
     /** start to compair dates */
-    var D = 19;
-    var E = 20;
+    var D = 18;
+    var E = 19;
     var F = 1;
     var dateToday = new Date();
     var contracts_termColumn = $(`#oldDataStoredInStaticFile td[cell="${E}"]`);
     var delivery_dateColumn = $(`#oldDataStoredInStaticFile td[cell="${D}"]`);
     var order_numberColumn = $(`#oldDataStoredInStaticFile td[cell="${F}"]`);
-
-
     /** start append the new column to the parent table */
     var parentTable = $(contracts_termColumn).closest("table");
 
@@ -692,12 +750,14 @@ function compairTheDate() {
             var DA = Date.parse(dateToday) + contracts_termInMS;
             var leaft = DA - Date.parse(dateToday);
 
+            // Date between term and 
             var DBTaDD = Math.floor((Date.parse(dateToday) - Date.parse(dToDateObject)) / (1000 * 60 * 60 * 24));
 
 
             var leaftD = leaft / (1000 * 60 * 60 * 24) - DBTaDD;
             var leaftM = leaft / (1000 * 60 * 60 * 24 * 30);
             // in case the contract is not starts yet
+
             if (DBTaDD < 0) {
                 var td = $(`<td hCell="IMP" >${Math.abs(DBTaDD)} T</td>`);
                 $(`#oldDataStoredInStaticFile #${rowID}`).append(td);
@@ -708,17 +768,20 @@ function compairTheDate() {
             // to detect soon finishing term of any cotract
             if (leaftD > 90 && leaftD <= 180) {
                 td.addClass("WORN");
-            } else if (leaftD < 90) {
+            } else if (leaftD < 90 && leaftD > 0) {
                 td.addClass("DENG");
                 td.transition('set looping').transition('pulse', '500ms');
-            } else if (DBTaDD < 0) {
+            } else if (leaftD > 180) {
                 td.addClass("POSITIVE");
-
+            } else if (leaftD < 0) {
+                td.text(`${Math.abs(leaftD)} D ago`);
+                td.addClass("DENGL2");
+                td.transition('set looping').transition('pulse', '500ms');
             }
 
             addPopupContent($(`#${rowID}`));
         } else {
-            console.log("CELL EXIST IT SHOULD TO UPDATE ONLY");
+            /** in case the column of IMP data is exist or not */
         }
 
     });
@@ -754,6 +817,10 @@ function secounderyTableRowClick(event) {
             })
         }
     }
+    /** in case user does not press both alt keys */
+    else {
+
+    }
 }
 
 
@@ -765,7 +832,6 @@ var regularEx = {
     EmailAddress: /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/igm,
     dates: /^\d{1,2}\/\d{1,2}\/\d{2,4}$/,
     datesPoints: /^\d{1,2}[-\.-\//]\d{1,2}[-\.-\//]\d{4}$/,
-
 }
 
 /**
