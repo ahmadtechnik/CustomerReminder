@@ -1,6 +1,7 @@
 var XLSX = require("xlsx");
 var FS = require("fs");
 var PATH = require("path");
+var MD = require("md5");
 // add new funciton To jQuery 
 
 $.eachSync = (obj, resu, end, start) => {
@@ -31,11 +32,6 @@ $(document).ready(() => {
     $(`#uploadeFileHiddenBtn`).change(onFileUploadedAction);
     //
     // $(`.sidebar`).sidebar("toggle");
-    //
-    $(`.searchByInputField`).keydown(onSearchFieldsKeyDown);
-    $(`.searchByInputField`).focusout(onSearchFieldFucosout);
-    $(`.searchByInputField`).focusin(onSearchFieldFucosIn);
-    //
     $('#uploadFileAccordion').accordion();
     //
     initStoredData()
@@ -55,209 +51,189 @@ var FILEDATA = {};
 function onFileUploadedAction() {
     var file = this.files[0];
     var thisBtn = this;
+    $(`#seatchFieldsContainer`).html("");
     // in case was the file not equals undefined
     if (file !== undefined) {
+        switch (file.type) {
+            case "application/vnd.ms-excel":
+                $(`#uploadedFileName`).text(file.name);
+                var fileReader = new FileReader();
 
-        $(`#uploadedFileName`).text(file.name);
-        var fileReader = new FileReader();
+                fileReader.onload = (F) => {
+                    var array8bit = new Uint8Array(F.target.result);
+                    var xlsxFile = XLSX.read(array8bit, {
+                        type: "array"
+                    }).Sheets;
 
-        fileReader.onload = (F) => {
-            var array8bit = new Uint8Array(F.target.result);
-            var xlsxFile = XLSX.read(array8bit, {
-                type: "array"
-            }).Sheets;
+                    /**
+                     * make sure the file is only one sheet 
+                     *  in case the file was larger than one sheet
+                     *  it should to be handled in other way.
+                     * in case also the file was not empty or does not have any sheet
+                     */
+                    if (Object.keys(xlsxFile).length <= 1 && Object.keys(xlsxFile).length > 0) {
+                        var F = createOrOpenFile("staticData.json");
+                        // each file's sheets
+                        $.eachSync(xlsxFile, (index, sheet) => {
+                            var jsonSheet = XLSX.utils.sheet_to_json(sheet, {
+                                raw: false,
+                                //blankrows: false,
+                            });
 
-            // each file's sheets
-            $.eachSync(xlsxFile, (index, sheet) => {
-                var jsonSheet = XLSX.utils.sheet_to_json(sheet, {
-                    raw: false,
-                    //blankrows: false,
-                });
-                console.log(jsonSheet);
-                $.eachSync(jsonSheet, (sheet, row) => {
-                    $.eachSync(row, (i, cell) => {
-                        jsonSheet[sheet][i] = jsonSheet[sheet][i].toString("UTF-8")
-                    });
-                });
-                /** DEPRECATED FUNCTION WAS HERE */
+                            // check if this sheet exist in the file
+                            var sheetName = MD(sheet["!ref"]);
+                            var sheetHeader = Object.keys(jsonSheet[0]);
 
-                // check if this sheet exist in the file
-                var sheetName = sheet["!ref"];
-                var sheetHeader = Object.keys(jsonSheet[0]);
-                var F = createOrOpenFile("staticData.json");
-                if (F[sheetName] === undefined) {
-                    F[sheetName] = {
-                        tableHeader: sheetHeader
-                    }
-                    writeNewDataToFile("staticData.json", F);
-                } else {
-                    // in case this sheet was exist in file
+                            /** check if this sheet is created in static file before */
+                            if (F[sheetName] === undefined) {
+                                F[sheetName] = {
+                                    tableHeader: sheetHeader
+                                }
+                                writeNewDataToFile("staticData.json", F);
+                            }
+                            /**  create row hash */
+                            $.eachSync(jsonSheet, (i, row) => {
+                                jsonSheet[i]["hash"] = MD(Object.values(row).join("-"));
+                            }, () => {
+                                FILEDATA[sheetName] = jsonSheet;
+                            });
+
+                            /** create search fields as long as the header of the CSV file */
+                            $.eachSync(sheetHeader, (i, e) => {
+                                /** 
+                                 * in this block i am adding all avalible search fields
+                                 * to make the user able to select search method totaly free
+                                 *  */
+                                var fieldDiv = $(`<div class="field" by="${e}"></div>`);
+                                fieldDiv.css(HIDE_CSS_CLASS);
+                                var label = $(`<label>Search By : ${e}</label>`);
+                                var input = $(`<input type="text" placeholder="${e}" by="${e}" class="selectByToShow"/>`);
+                                /** add keydown Action for this input field */
+                                input.keydown(searchMethods.onKeyDownSearchField);
+                                input.keyup(searchMethods.onKeyUpSearchField);
+                                /** append the elements to field div */
+                                fieldDiv.append([label, input]);
+                                $(`#seatchFieldsContainer`).append(fieldDiv);
+                            }, (sheetHeader) => {
+                                /** add the select menu of choosing the search method */
+                                var selectByToShow = $(`<select class="ui dropdown"></select>`);
+                                selectByToShow.append(`<option value="0">Please Select</option>`);
+                                $.eachSync(sheetHeader, (i, e) => {
+                                    selectByToShow.append(`<option value="${e}">${e}</option>`);
+                                });
+                                var divField = $(`<div class="field"></div>`);
+                                divField.append([
+                                    $(`<label>Select Column to search by</label>`),
+                                    selectByToShow
+                                ]);
+                                $(`#seatchFieldsContainer`).append(divField);
+                                selectByToShow.dropdown({
+                                    onChange: onSearchMethodSelector
+                                });
+                            })
+                        }, (xlsxFile) => {
+                            //$(`#sheetsContainer`).html();
+                            $('#uploadFileAccordion').accordion("close", 0);
+                        });
+                        // end each the file's sheets
+                        $(`body`).removeClass(LOADING);
+                    };
                 }
-                FILEDATA[sheetName] = jsonSheet;
+                fileReader.onprogress = (FileReader, ProgressEvent) => {
 
-            }, (xlsxFile) => {
-                //$(`#sheetsContainer`).html();
-                $('#uploadFileAccordion').accordion("close", 0);
-            });
-            // end each the file's sheets
-            $(`body`).removeClass(LOADING);
-        };
-
-        fileReader.onprogress = (FileReader, ProgressEvent) => {
-
-        };
-        fileReader.onloadstart = () => {
-            $(`body`).addClass(LOADING);
+                };
+                fileReader.onloadstart = () => {
+                    $(`#sheetsContainer`).html("");
+                    $(`body`).addClass(LOADING);
+                    FILEDATA = {};
+                }
+                fileReader.readAsArrayBuffer(file);
+                break;
         }
-        fileReader.readAsArrayBuffer(file);
+
     } else {
         $(`#uploadedFileName`).text("No documents are listed for this customer.");
     }
     dateCellDetactor();
 }
-/** 
- * 
- */
-function onSearchFieldsKeyDown(event) {
-    var F = createOrOpenFile("staticData.json");
-    var by = parseInt($(this).attr("by"));
-    var tableRows = $(`.sheetsContainer table tbody tr`);
-    var searchBy = {
-        1: "Auftr.-Nr.",
-        6: "Kunden",
-        10: "Zählernummer",
-        11: "Tarif/Produkt"
-    };
 
-    if (tableRows.length === 0) {
-        /** to check if the static data table is exist */
-        var tableRows = $(`.oldDataStoredInStaticFile table tbody tr`);
-        if (Object.keys(FILEDATA).length < 1 && STATICFILEROWS.length < 1) {
-            $('#uploadFileAccordion').accordion("open", 0);
-            $(`#topFileUploaderSeciton`).transition('pulse');
-            return false;
-        }
-    }
-    var interedValue = $(this).val().toLowerCase();
-    if (event.keyCode === 13) {
-        /** check if the search result exist into uploaded file */
-        if (Object.keys(FILEDATA).length > 0) {
-            var foundedCountr = 0;
-            var foundedItems = {};
-            var tableHeader = [];
-            $.eachSync(FILEDATA, (sheetName, sheet) => {
-                foundedItems[sheetName] = [];
-                $.eachSync(sheet, (i, row) => {
-                    var searchByKey = searchBy[by];
-                    var contains = row[searchByKey];
-                    var rowIDtoShow = row[searchBy[1]];
-                    if (contains.toString().includes(interedValue)) {
-                        //$(`.sheetsContainer tr[id="${rowIDtoShow}"]`).css(SHOW_CSS_CLASS);
-                        if (foundedCountr < 3) {
-                            foundedItems[sheetName].push(row);
-                            tableHeader = Object.keys(row);
-                        }
-                        foundedCountr++;
-                    } else {
-                        // in case search word does not mach any value
-                    }
-                });
-            }, (sheet, key) => {
-                if (foundedCountr < 1) {
-                    $(`#sheetsContainer`).html("<h1 class='ui header center alignd'>THERE IS NO RESULT...</h1>");
-                } else if (foundedCountr > 1) {
-                    $(`#sheetsContainer`).html("<h1 class='ui header center alignd'>THERE ARE MULTI RESULT...</h1>");
-                } else {
-                    // create new table
-                    var tableE = $(`<table class="ui celled single line striped  table"></table>`);
-                    var tableHead = $(`<thead></thead>`);
-                    var trHead = $(`<tr></tr>`);
-                    var tableBody = $(`<tbody></tbody>`);
-                    // first child
-                    /** each header of the table */
-                    $.eachSync(tableHeader, (i, v) => {
-                        trHead.append(`<th hcell="${i}">${v}</th>`);
-                    }, (tableHeader) => {
-                        tableHead.append(trHead);
-                        tableE.append(tableHead);
-                        /** each row body */
-                        $.eachSync(foundedItems, (sheetname, sheet) => {
-                            $.eachSync(sheet, (i, row) => {
-                                var trBody = $(`<tr sheetname="${sheetname}" id="${row[searchBy[1]]}" ></tr>`);
-                                $.eachSync(row, (i, cell) => {
-                                    var td = $(`<td cell="${tableHeader.indexOf(i)}">${cell}</td>`);
-                                    td.click(onCellClickAction);
-                                    trBody.append(td);
-                                }, (row) => {
-                                    /** check if the drawed row not exist into static file */
-                                    if (F[sheetname][row[searchBy[1]]] !== undefined) {
-                                        trBody.addClass("disabled");
-                                    }
-                                    /** append table row to table body */
-                                    tableBody.append(trBody);
-                                    tableE.append(tableBody);
-                                });
-                            }, (sheet) => {
+var searchMethods = {
+    onKeyDownSearchField: (event) => {
+        // user searching by
+        var by = $(event.target).attr("by");
+        var value = $(event.target).val().toLowerCase();
+        var foundedRows = [];
+        if (event.keyCode === 13) {
+            if (value !== "") {
+                var sheetHash
+                $.eachSync(FILEDATA, (i, sheet) => {
+                    sheetHash = i;
 
-                            });
-                        }, (foundedItems) => {
-                            /** append table to search result area */
-                            var clearThisTableBtn = $(`<div class="ui button top attached red fullWidth">Remove Table</div>`);
-                            clearThisTableBtn.click(() => {
-                                $(`#uploadeFileHiddenBtn`).val("");
-                                $(`#sheetsContainer`).html("");
-                                $(`#uploadeFileHiddenBtn`).change();
-                                FILEDATA = [];
-                            });
-                            $(`#sheetsContainer`).html([clearThisTableBtn, tableE]);
-                            dateCellDetactor();
-                        });
-                    });
-                }
-            });
-        }
-        /** in case the row was exist in other row */
-        else if (STATICFILEROWS.length > 0) {
-            if (STATICFILEROWS.length > 0) {
-                $.each(STATICFILEROWS, (i, sheet) => {
-                    $.each(sheet, (i, row) => {
-                        if (i !== "tableHeader") {
-                            if (row[by].toString().includes(interedValue)) {
-                                $(`.oldDataStoredInStaticFile table tbody tr[id="${row[1]}"]`).css(SHOW_CSS_CLASS);
-                            } else {
-                                $(`.oldDataStoredInStaticFile table tbody tr[id="${row[1]}"]`).css(HIDE_CSS_CLASS);
+                    $.eachSync(sheet, (i, row) => {
+                        if (row[by] !== undefined) {
+                            if (row[by].toLowerCase() === value) {
+                                foundedRows.push(row);
                             }
                         }
-                    })
+                    }, (sheet) => {});
+                }, (FILEDATA) => {
+                    /** each founded rows */
+                    if (foundedRows.length < 50 && foundedRows.length > 0) {
+                        var tableHeader = Object.keys(FILEDATA[Object.keys(FILEDATA)[0]][0]);
+                        $(`#sheetsContainer`).html("");
+                        // create new table
+                        var tableE = $(`<table class="ui celled single line striped  table"></table>`);
+                        var tableHead = $(`<thead></thead>`);
+                        var trHead = $(`<tr></tr>`);
+                        var tableBody = $(`<tbody></tbody>`);
+                        /** each search table result header */
+                        $.eachSync(tableHeader, (i, cell) => {
+                                cell !== "hash" ? trHead.append(`<th>${cell}</th>`) : "";
+                            }
+                            // after finisheing add the header
+                            , (tableHeader) => {
+                                /** each result rows */
+                                $.eachSync(foundedRows, (i, row) => {
+                                    var tableBodyRow = $(`<tr id="${foundedRows[i]["hash"]}" sheetHash="${sheetHash}"></tr>`);
+                                    /** each row cells */
+                                    var counter = 0;
+                                    /** add on click on the row  */
+                                    
+                                    $.eachSync(row, (i, cell) => {
+                                        i !== "hash" ? tableBodyRow.append(`<td cell="${counter}">${cell}</td>`) : "";
+                                        i !== "hash" ? counter++ : "";
+                                    }, (row) => {
+                                        tableBody.append(tableBodyRow);
+                                        tableHead.append(trHead);
+                                        tableE.append([tableHead, tableBody]);
+                                        $(`#sheetsContainer`).html(tableE);
+                                        tableBodyRow.click(onCellClickAction);
+                                        dateCellDetactor();
+                                    });
+                                });
+                            });
+
+                        /** remove error color from element */
+                        $(event.target).parent().removeClass("error");
+                    } else if (foundedRows.length === 0) {
+                        /** add error color to field eleemnt */
+                        $(event.target).parent().addClass("error");
+                        $(`#sheetsContainer`).html("");
+                    } else {
+                        /**  */
+                        $(event.target).parent().removeClass("error");
+                        alert("please specify your search word");
+                        $(`#sheetsContainer`).html("");
+                    }
                 });
             }
         }
-        /*
-        tableRows.each((i, row) => {
-            $(row).find("td").each((i, cell) => {
-                if (i === by) {
-                    var cellValue = $(cell).text().toLowerCase();
-                    var inclodes = cellValue.includes(interedValue);
-                    var oldBackGround = $(row).css("background");
-                    if (inclodes) {
-                        $(row).css(SHOW_CSS_CLASS);
-                        $(cell).transition({
-                            animation: 'pulse',
-                        });
-                    } else {
-                        $(row).css(HIDE_CSS_CLASS);
-                    }
-                }
-            });
-        });
-        */
-        $(this).select();
-    }
-    if (interedValue === "") {
-        $(`.oldDataStoredInStaticFile table tbody tr`).css(SHOW_CSS_CLASS);
-        $(`.sheetsContainer table tbody tr`).css(HIDE_CSS_CLASS)
+    },
+    onKeyUpSearchField: () => {
+
     }
 }
+
 /** 
  * 
  */
@@ -328,13 +304,12 @@ var CHOOSED_ROW_TABLE_ID = "";
 
 function onCellClickAction(event) {
 
-    var currentRow = event.target.parentElement;
+    var currentRow = this;
     var rowID = currentRow.getAttribute("id");
     var cellsInRow = $(currentRow).find("td");
     var tableHeader = cellsInRow.closest("table").find("thead").find("tr").find("th");
     CHOOSED_ROW_TABLE_ID = rowID;
 
-    console.log(rowID);
 
     var rowData = [];
     rowData[0] = "<div class='ui center aligned icon header'>-Customers data-</div>";
@@ -434,7 +409,7 @@ function onInsertDataModalOnApprove(modal) {
         var rowToWriteToFile = [];
         /** push the new values to row  */
         $(`.sheetsContainer #${CHOOSED_ROW_TABLE_ID} td`);
-        var sheetname = $(`#${CHOOSED_ROW_TABLE_ID}`).attr("sheetname");
+        var sheetname = $(`#${CHOOSED_ROW_TABLE_ID}`).attr("sheetHash");
         $(`.sheetsContainer #${CHOOSED_ROW_TABLE_ID} td`).each((i, e) => {
             rowToWriteToFile.push($(e).text());
         });
@@ -471,9 +446,14 @@ function onInsertDataModalOnApprove(modal) {
     }
 
 }
-/** */
 function onInsertDataModalOnDeny(modal) {
+    
+}
+/** row hashing */
+var hashing = {
+    fromString: function generateHashFromString(params) {
 
+    }
 }
 
 /** */
@@ -555,8 +535,8 @@ function initStoredData() {
                             $(`<tr class="columnMerged" id="${i}" sheetName="${sheetName}" >
                             <td colspan="${headerLength}">${row.join(" # ")}</td>
                             </tr>`);
-                            tableBody.append(emptyTableRow);
-                            emptyTableRow.click(secounderyTableRowClick);
+                        tableBody.append(emptyTableRow);
+                        emptyTableRow.click(secounderyTableRowClick);
                     } else {
                         /**
                          * each rows which are not table body
@@ -834,6 +814,13 @@ var regularEx = {
     datesPoints: /^\d{1,2}[-\.-\//]\d{1,2}[-\.-\//]\d{4}$/,
 }
 
+function onSearchMethodSelector(item) {
+    $(`div[by]`).find("input").val("");
+    $(`div[by]`).removeClass("error")
+    $(`div[by]`).css(HIDE_CSS_CLASS);
+    $(`div[by='${item}']`).css(SHOW_CSS_CLASS);
+}
+
 /**
  * TO ADD
  * - Kundennummer
@@ -841,159 +828,3 @@ var regularEx = {
  * - Laufzeit des vertrags
  * - hinweise
  */
-
-
-function depr(params) {
-    if (jsonSheet.length > 0) {
-        /**
-         * add new sheet object to json file
-         */
-
-        var sheetHeader = [];
-
-        var html = XLSX.utils.sheet_to_html(sheet, {
-            editable: false,
-        });
-        // get table from HTML
-        var table = $($(html)[2]);
-
-        // create new table
-        var tableE = $(`<table class="ui celled single line striped  table"></table>`);
-        var tableHead = $(`<thead></thead>`);
-        var tableBody = $(`<tbody></thead>`);
-        // get first row of the table
-        var tableHeader = table.find("tbody").find("tr")[0];
-        /** replace the td with th to make the first row as header */
-        var ColumnsIndexes = {};
-        $(tableHeader).find("td").each((i, v) => {
-            /** write table head */
-            $(v).replaceWith(`<th hcell="${i}">${v.textContent}-${i}</th>`);
-            ColumnsIndexes[i] = $(v).text();
-            // push the header cells to header file
-            sheetHeader.push($(v).text());
-        });
-
-
-        // append all rows without header
-        $.eachSync(table.find("tbody").find("tr"), (index, row) => {
-
-            /** assign new attributes to row data */
-            if (index !== 0 && $(row).children().length > 0) {
-                $(row).attr("sheetName", sheet["!ref"]);
-                tableBody.append(row);
-                $(row).click(secounderyTableRowClick);
-            }
-            /** detect if row is empty */
-            var rowDR = $(row).find("td");
-            var rowDRDS = $(row).find("[t='z']");
-
-            if (rowDR.length === rowDRDS.length) {
-                row.remove()
-            } else {
-                /** set row id from index num 1 */
-                if ($(row).find("td")[1].textContent !== "") {
-
-                    $(row).attr("id", $(row).find("td")[1].textContent);
-                    // in case the row eixt in static file
-                    var F = createOrOpenFile("staticData.json");
-
-                    if (F[sheetName][$(row).find("td")[1].textContent] !== undefined) {
-                        $(row).addClass("disabled")
-                    }
-                }
-            }
-            /** detect all emails and phone numbers/Emails date of birth and */
-            if ($(row).children().length > 0 && index !== 0) {
-
-                var children = $(row).children();
-                /** each row cell */
-                $.each(children, (index, chiled) => {
-                    /** check number mach */
-                    $(chiled).attr("cell", index);
-
-                    var machPhone = chiled.textContent.match(regularEx.MobileWithCountryCode);
-                    var machEmail = chiled.textContent.match(regularEx.EmailAddress);
-                    var machDate = chiled.textContent.match(regularEx.dates);
-                    var datesPoints = chiled.textContent.match(regularEx.datesPoints);
-                    /** detect Phone Number */
-                    if (machPhone) {
-                        if (index === 9) {
-                            /** repace white space */
-                            $(chiled).text($(chiled).text().replace(/[\s]/g, ""))
-                            $(chiled).attr("action", "sendSMS");
-                            $(chiled).attr("number", chiled.textContent);
-                            $(chiled).addClass(["cursor"]);
-
-                            $(chiled).css({
-                                background: "#0f3d0f",
-                                color: "white"
-                            });
-                        }
-                    }
-                    /** start detect Email address */
-                    if (machEmail) {
-                        $(chiled).append("<br><a class='item'>Email</a>");
-                        $(chiled).addClass("warning");
-                        $(chiled).addClass(["positive", "cursor"]);
-                    }
-                    /** detect all dates in the table */
-                    if (machDate || datesPoints) {
-                        var DataInTable = Date.parse(chiled.textContent);
-                        var DateToday = new Date();
-                        var Difrant = Date.parse(DateToday) - DataInTable;
-                        var diffDays = Math.floor(Difrant / (1000 * 60 * 60 * 24));
-                        var diffYears = Math.floor(Difrant / (1000 * 60 * 60 * 24 * 365.25));
-                        var diffMonthes = Math.floor(Difrant / (1000 * 60 * 60 * 24 * 30));
-                        /** select spacific Cell index  index === 3*/
-                        if (index === 3) {
-                            $(chiled).css({
-                                background: "#ff9966",
-                                color: "white"
-                            });
-                            /** add since attrbute to row */
-                            $(chiled).parent().attr("since", diffDays);
-                            /** add class to make this elemnt corsur */
-                            $(chiled).addClass("cursor");
-                            /** add on click event to this cell */
-                            $(chiled).click(onCellClickAction);
-                        }
-                        /** in case the field was an date of birth */
-                        else if (index === 8) {
-                            if (datesPoints) {
-                                /** replace the point with slash */
-                                $(chiled).text($(chiled).text().replace(/[.]/g, "/"));
-                            }
-                            $(chiled).css({
-                                background: "#33cc33",
-                                color: "white"
-                            });
-                        }
-                    }
-                    /** add action to first cell in the table */
-                    if (index === 0 && chiled.textContent !== "") {
-                        $(chiled).addClass(["costumerModalShow", "firstCell"]);
-                        /** add cell click event */
-                        $(chiled).click(onCellClickAction);
-                    }
-                });
-                $(row).css(HIDE_CSS_CLASS);
-            }
-        }, (obj) => {
-            // when the function finished
-            $('#uploadFileAccordion').accordion("close", 0);
-        }, (obj) => {
-
-        });
-        tableHead.append(tableHeader);
-        tableE.append(tableHead);
-        tableE.append(tableBody);
-        var clearThisTableBtn = $(`<div class="ui button top attached red fullWidth">Remove Table</div>`);
-        clearThisTableBtn.click(() => {
-            $(thisBtn).val("");
-            $(`#sheetsContainer`).html("");
-            $(thisBtn).change();
-            FILEDATA = [];
-        });
-        $(`#sheetsContainer`).html([clearThisTableBtn, tableE]);
-    }
-}

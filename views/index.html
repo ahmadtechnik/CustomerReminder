@@ -46,7 +46,7 @@
                             <div class="ui primary button" id="uploadFile" onclick="$('#uploadeFileHiddenBtn').click()">
                                 Upload File
                             </div>
-                            <input type="file" id="uploadeFileHiddenBtn" style="display: none;">
+                            <input type="file" id="uploadeFileHiddenBtn" style="display: none;" accept=".csv">
                         </div>
                     </div>
                 </div>
@@ -55,23 +55,8 @@
         <!--  -->
         <div class="ui segment basic ">
             <div class="ui form">
-                <div class="equal width fields">
-                    <div class="field">
-                        <label for="">Search By Auftr.-Nr.</label>
-                        <input type="text" placeholder="48546.." class="searchByInputField" by="1">
-                    </div>
-                    <div class="field">
-                        <label for="">Search By Kundenname.</label>
-                        <input type="text" placeholder="Kundenname.." class="searchByInputField" by="6">
-                    </div>
-                    <div class="field">
-                        <label for="">Search By Zählernummer</label>
-                        <input type="text" placeholder="Zählernummer.." class="searchByInputField" by="10">
-                    </div>
-                    <div class="field">
-                        <label for="">Search By Tarif/Produkt</label>
-                        <input type="text" placeholder="Tarif/Produkt" class="searchByInputField" by="11">
-                    </div>
+                <div class="equal width fields" id="seatchFieldsContainer">
+
                 </div>
                 <div class="field">
                     <label for=""></label>
