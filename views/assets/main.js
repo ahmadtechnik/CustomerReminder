@@ -288,6 +288,15 @@ function onCellClickAction(event) {
             .append([`<label>Laufzeit des vertrags <span class="redWhite">in Months</span><label>`, `<input type="text" id="contracts_term" />`]),
             $(`<div class="field"></div>`)
             .append([`<label>hinweise<label>`, `<textarea rows="2" id="notes"></textarea>`])
+            // append the upload btn 
+            .append(`<div class="ui placeholder segment inverted secondary ">
+            <div class="ui icon header">
+              <i class="pdf file outline icon"></i>
+              No documents are listed for this customer.
+            </div>
+            <div class="ui primary button" onclick="$('#uploadAttachedElementsToRow').click()">Add Document</div>
+            <input type="file" class="hidden" id="uploadAttachedElementsToRow"/>
+          </div>`)
         ])
     ));
 
@@ -312,6 +321,10 @@ function onCellClickAction(event) {
         onDeny: onInsertDataModalOnDeny,
         onHidden: onInsertDataModalHidden
     }).modal("show");
+    /** add action for upload attached files btn */
+    $(`#uploadAttachedElementsToRow`).change((target) => {
+
+    });
 }
 
 /** */
@@ -634,7 +647,6 @@ function compairTheDate() {
             var checkIfCellExist = $(`#oldDataStoredInStaticFile #${rowID}`).find(`td[hCell='IMP']`);
             /** in case was the cell which contain the leaft time on */
             if (checkIfCellExist.length < 1) {
-                var v = new Date();
 
                 var delivery_date = $(D).text().split("-");
                 var day = parseInt(delivery_date[0]);
@@ -655,10 +667,10 @@ function compairTheDate() {
                 var DBTaDD = Math.floor((Date.parse(dateToday) - Date.parse(dToDateObject)) / (1000 * 60 * 60 * 24));
 
 
-                var leaftD =( leaft / (1000 * 60 * 60 * 24)) - DBTaDD;
+                var leaftD = (leaft / (1000 * 60 * 60 * 24)) - DBTaDD;
                 var leaftM = leaft / (1000 * 60 * 60 * 24 * 30);
                 // in case the contract is not starts yet
-                console.log( leaft / (1000 * 60 * 60 * 24) )
+                console.log(leaft / (1000 * 60 * 60 * 24))
                 if (DBTaDD < 0) {
                     var td = $(`<td hCell="IMP" >${Math.abs(DBTaDD)} T</td>`);
                     $(`#oldDataStoredInStaticFile #${rowID}`).append(td);

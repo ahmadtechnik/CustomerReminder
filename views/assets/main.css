@@ -87,6 +87,11 @@
 .newDataToRows {
     width: 30%;
 }
-.oldDataStoredInStaticFile{
+
+.oldDataStoredInStaticFile {
     width: 70%;
+}
+
+.hidden {
+    display: none !important;
 }
