@@ -78,8 +78,15 @@
     color: white !important;
 }
 
-.columnMerged{
+.columnMerged {
     background-color: #f54242 !important;
     color: white !important;
-    text-align:  center !important;
+    text-align: center !important;
+}
+
+.newDataToRows {
+    width: 30%;
+}
+.oldDataStoredInStaticFile{
+    width: 70%;
 }

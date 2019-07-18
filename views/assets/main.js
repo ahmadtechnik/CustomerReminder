@@ -5,7 +5,6 @@ var MD = require("md5");
 // add new funciton To jQuery 
 
 $.eachSync = (obj, resu, end, start) => {
-
     start && start(obj);
     var objLength = Object.keys(obj).length;
 
@@ -21,21 +20,15 @@ $.eachSync = (obj, resu, end, start) => {
 }
 //
 $(document).ready(() => {
-
     //
-    $(`.dropdown`).dropdown({
-        onChange: onCellCleanerChange,
-        onRemove: onRemoveSelectItem,
-        clearable: true
-    });
+    $(`.dropdown`).dropdown();
     //
     $(`#uploadeFileHiddenBtn`).change(onFileUploadedAction);
     //
     // $(`.sidebar`).sidebar("toggle");
     $('#uploadFileAccordion').accordion();
     //
-    initStoredData()
-
+    initStoredData();
 });
 
 var SELECT_CLASS = ["ui", "segment", "teal", "inverted", "basic"];
@@ -51,7 +44,7 @@ var FILEDATA = {};
 function onFileUploadedAction() {
     var file = this.files[0];
     var thisBtn = this;
-    $(`#seatchFieldsContainer`).html("");
+
     // in case was the file not equals undefined
     if (file !== undefined) {
         switch (file.type) {
@@ -98,37 +91,41 @@ function onFileUploadedAction() {
 
                             /** create search fields as long as the header of the CSV file */
                             $.eachSync(sheetHeader, (i, e) => {
-                                /** 
-                                 * in this block i am adding all avalible search fields
-                                 * to make the user able to select search method totaly free
-                                 *  */
-                                var fieldDiv = $(`<div class="field" by="${e}"></div>`);
-                                fieldDiv.css(HIDE_CSS_CLASS);
-                                var label = $(`<label>Search By : ${e}</label>`);
-                                var input = $(`<input type="text" placeholder="${e}" by="${e}" class="selectByToShow"/>`);
-                                /** add keydown Action for this input field */
-                                input.keydown(searchMethods.onKeyDownSearchField);
-                                input.keyup(searchMethods.onKeyUpSearchField);
-                                /** append the elements to field div */
-                                fieldDiv.append([label, input]);
-                                $(`#seatchFieldsContainer`).append(fieldDiv);
-                            }, (sheetHeader) => {
-                                /** add the select menu of choosing the search method */
-                                var selectByToShow = $(`<select class="ui dropdown"></select>`);
-                                selectByToShow.append(`<option value="0">Please Select</option>`);
-                                $.eachSync(sheetHeader, (i, e) => {
-                                    selectByToShow.append(`<option value="${e}">${e}</option>`);
-                                });
-                                var divField = $(`<div class="field"></div>`);
-                                divField.append([
-                                    $(`<label>Select Column to search by</label>`),
-                                    selectByToShow
-                                ]);
-                                $(`#seatchFieldsContainer`).append(divField);
-                                selectByToShow.dropdown({
-                                    onChange: onSearchMethodSelector
-                                });
-                            })
+                                    /** 
+                                     * in this block i am adding all avalible search fields
+                                     * to make the user able to select search method totaly free
+                                     *  */
+                                    var fieldDiv = $(`<div class="field" by="${e}"></div>`);
+                                    fieldDiv.css(HIDE_CSS_CLASS);
+                                    var label = $(`<label>Search By : ${e}</label>`);
+                                    var input = $(`<input type="text" placeholder="${e}" by="${e}" class="selectByToShow"/>`);
+                                    /** add keydown Action for this input field */
+                                    input.keydown(searchMethods.onKeyDownSearchField);
+                                    input.keyup(searchMethods.onKeyUpSearchField);
+                                    /** append the elements to field div */
+                                    fieldDiv.append([label, input]);
+                                    $(`#seatchFieldsContainer`).append(fieldDiv);
+                                }, (sheetHeader) => {
+                                    /** add the select menu of choosing the search method */
+                                    var selectByToShow = $(`<select class="ui dropdown"></select>`);
+                                    selectByToShow.append(`<option value="0">Please Select</option>`);
+                                    $.eachSync(sheetHeader, (i, e) => {
+                                        selectByToShow.append(`<option value="${e}">${e}</option>`);
+                                    });
+                                    var divField = $(`<div class="field"></div>`);
+                                    divField.append([
+                                        $(`<label>Select Column to search by</label>`),
+                                        selectByToShow
+                                    ]);
+                                    $(`#seatchFieldsContainer`).append(divField);
+                                    selectByToShow.dropdown({
+                                        onChange: onSearchMethodSelector
+                                    });
+                                },
+                                /** before start to add the new input fields to document */
+                                (sheetHeader) => {
+                                    $(`#seatchFieldsContainer`).html("")
+                                })
                         }, (xlsxFile) => {
                             //$(`#sheetsContainer`).html();
                             $('#uploadFileAccordion').accordion("close", 0);
@@ -161,16 +158,18 @@ var searchMethods = {
         var by = $(event.target).attr("by");
         var value = $(event.target).val().toLowerCase();
         var foundedRows = {};
+        var F = createOrOpenFile("staticData.json");
         if (event.keyCode === 13) {
             if (value !== "") {
                 var sheetHash
                 $.eachSync(FILEDATA, (i, sheet) => {
                     sheetHash = i;
-
                     $.eachSync(sheet, (i, row) => {
                         if (row[by] !== undefined) {
-                            if (row[by].toLowerCase() === value) {
-                                foundedRows[i] = row;
+                            if (typeof row[by] === "string") {
+                                if (row[by].toLowerCase().includes(value)) {
+                                    foundedRows[i] = row;
+                                }
                             }
                         }
                     }, (sheet) => {});
@@ -192,36 +191,38 @@ var searchMethods = {
                             , (tableHeader) => {
                                 /** each result rows */
                                 $.eachSync(foundedRows, (i, row) => {
+                                    var addedBefore = F[sheetHash][row["hash"]] === undefined ? false : true;
+
                                     var tableBodyRow =
-                                        $(`<tr index="${i}" id="${foundedRows[i]["hash"]}" sheetHash="${sheetHash}"></tr>`);
+                                        $(`<tr index="${i}" id="${foundedRows[i]["hash"]}" rowClick="true" sheetHash="${sheetHash}"></tr>`);
                                     /** each row cells */
                                     var counter = 0;
-                                    /** add on click on the row  */
 
+                                    tableBody.append(tableBodyRow);
+                                    addedBefore ? tableBodyRow.addClass("disabled") : "";
                                     $.eachSync(row, (i, cell) => {
                                         i !== "hash" ? tableBodyRow.append(`<td cell="${counter}">${cell}</td>`) : "";
                                         i !== "hash" ? counter++ : "";
                                     }, (row) => {
-                                        tableBody.append(tableBodyRow);
                                         tableHead.append(trHead);
                                         tableE.append([tableHead, tableBody]);
                                         $(`#sheetsContainer`).html(tableE);
-                                        tableBodyRow.click(onCellClickAction);
                                         dateCellDetactor();
+                                        /** add on click on the row  */
+                                        $(`tr[rowClick='true']`).click(onCellClickAction);
                                     });
                                 });
                             });
 
                         /** remove error color from element */
                         $(event.target).parent().removeClass("error");
-                    } else if (foundedRows.length === 0) {
+                    } else if (Object.keys(foundedRows).length === 0) {
                         /** add error color to field eleemnt */
                         $(event.target).parent().addClass("error");
                         $(`#sheetsContainer`).html("");
                     } else {
                         /**  */
                         $(event.target).parent().removeClass("error");
-                        alert("please specify your search word");
                         $(`#sheetsContainer`).html("");
                     }
                 });
@@ -239,7 +240,7 @@ var searchMethods = {
 var CHOOSED_ROW_TABLE_ID = "";
 
 function onCellClickAction(event) {
-
+    console.log("clicked");
     var currentRow = this;
     var rowID = currentRow.getAttribute("id");
     var cellsInRow = $(currentRow).find("td");
@@ -342,16 +343,15 @@ function onInsertDataModalOnApprove(modal) {
         return false;
     } else {
         var oldDataStored = createOrOpenFile("staticData.json");
-        var rowToWriteToFile = [];
+
+
         /** push the new values to row  */
-        $(`.sheetsContainer #${CHOOSED_ROW_TABLE_ID} td`);
         var sheetname = $(`#${CHOOSED_ROW_TABLE_ID}`).attr("sheetHash");
         var indexNum = $(`#${CHOOSED_ROW_TABLE_ID}`).attr("index");
 
         var rowToAdd = FILEDATA[sheetname][indexNum];
 
-        /** write new row to json file */
-        rowToWriteToFile.push(customer_number, delivery_date, contracts_term, notes);
+
         // in case the sheet name was not exist in the table
         if (oldDataStored[sheetname] !== undefined) {
 
@@ -360,18 +360,18 @@ function onInsertDataModalOnApprove(modal) {
             rowToAdd["Vertragslaufzeit"] = contracts_term;
             rowToAdd["Notiz"] = notes;
 
-            oldDataStored[sheetname][CHOOSED_ROW_TABLE_ID] = rowToAdd;
 
-            writeNewDataToFile("staticData.json", oldDataStored);
             // in case the row was not exist in the sheet object
             if (oldDataStored[sheetname][CHOOSED_ROW_TABLE_ID] === undefined) {
-                oldDataStored[sheetname][CHOOSED_ROW_TABLE_ID] = rowToWriteToFile;
+                oldDataStored[sheetname][CHOOSED_ROW_TABLE_ID] = rowToAdd;
 
-                console.log("New Row Added to sheet object");
                 $(`.sheetsContainer #${CHOOSED_ROW_TABLE_ID}`).addClass("disabled");
+                writeNewDataToFile("staticData.json", oldDataStored);
+                console.log("New Row Added to sheet object");
             } else {
                 // ask user if he would like to update the old data
                 console.log("THIS ROW IS  EXIST IN STATIC FILE");
+
             }
         } else {
             /**
@@ -389,12 +389,7 @@ function onInsertDataModalOnApprove(modal) {
 function onInsertDataModalOnDeny(modal) {
 
 }
-/** row hashing */
-var hashing = {
-    fromString: function generateHashFromString(params) {
 
-    }
-}
 
 /** */
 function createOrOpenFile(fileName) {
@@ -432,68 +427,70 @@ var STATICFILEROWS = [];
 function initStoredData() {
     $(`#oldDataStoredInStaticFile`).html("");
     var F = createOrOpenFile("staticData.json");
-    var length = Object.keys(F).length;
     var counter = 0;
-    var table = $(`<table class="ui single line table striped " id=""></table>`);
-    var tableHead = $(`<thead></thead>`);
-    var tableBody = $(`<tbody></tbody>`);
 
     // each all sheets in static file
     $.eachSync(F, (i, sheet) => {
-        STATICFILEROWS.push(sheet);
         var sheetName = i;
+        var table = $(`<table class="ui single line table striped " id="${sheetName}"></table>`);
+        var tableHead = $(`<thead></thead>`);
+        var tableBody = $(`<tbody></tbody>`);
+
+        STATICFILEROWS.push(sheet);
+
         var containData = false;
-        var tableHeader = sheet["tableHeader"];
         var headerOfCurrentSheetAdded = false;
+
         // each current sheet
-        if (Object.keys(sheet).length > 1) {
-            var headerLength = Object.keys(F[sheetName]["tableHeader"]).length;
+        if (Object.keys(sheet).length >= 1) {
+
             containData = true;
             /** each static file rows */
-            $.each(sheet, (i, row) => {
-
-                // in case was the current row the table header
-
+            $.eachSync(sheet, (i, row) => {
                 /** draw header of this sheet */
                 var rowHeader = Object.keys(row);
-                console.log(rowHeader)
+                /** */
                 if (!headerOfCurrentSheetAdded) {
                     var emptyTableRow = $(`<tr id="${sheetName}"></tr>`);
-                    $.each(rowHeader, (i, v) => {
-                        //console.log(i, v)
-                        emptyTableRow.append(`<th cell="${i}" >${v}</th>`);
-                        $(`#cellFilter`).append(`<option value="${i}">${v}</option>`);
+                    $.eachSync(rowHeader, (i, v) => {
+                        if (v !== "hash") {
+
+                            emptyTableRow.append(`<th cell="${v}" >${v}</th>`);
+                        }
+                    }, (rowHeader) => {
+                        headerOfCurrentSheetAdded = true;
                     });
                     tableHead.append(emptyTableRow);
                     headerOfCurrentSheetAdded = true;
                 }
+
+
                 /** in case the header of secoundery table was drawed */
-
-
                 var emptyTableRow = $(`<tr class="" id="${i}" sheetName="${sheetName}" ></tr>`);
                 var rowTableBodyLength = Object.keys(row).length;
                 /**
                  * each rows which are not table body
                  */
-                $.each(row, (i, v) => {
-                    var datesPoints = v.match(regularEx.datesPoints);
-                    if (datesPoints) {
-                        /** replace the point with slash */
-                        v.replace(/[.]/g, "/");
-                        console.log(i, v)
+                $.eachSync(row, (i, v) => {
+                    if (i !== "hash") {
+                        var datesPoints = v.match(regularEx.datesPoints);
+                        if (datesPoints) {
+                            /** replace the point with slash */
+                            v.replace(/[.]/g, "/");
+                        }
+                        emptyTableRow.append(`<td hCell="${i}" cell="${i}" >${v}</td>`);
                     }
-                    emptyTableRow.append(`<td hCell="${tableHeader[i]}" cell="${i}" >${v}</td>`);
-                    //console.log(i, v)
+                }, (row) => {
+
                 });
                 // add popup to sub data row of the table
                 emptyTableRow.click(secounderyTableRowClick);
                 tableBody.append(emptyTableRow);
-                addPopupContent(emptyTableRow);
 
-            }, () => {
-
+            }, (sheet) => {
+                table.append([tableHead, tableBody]);
+                $(`#oldDataStoredInStaticFile`).append(table);
             });
-
         }
         if (containData) {
             table.append([tableHead, tableBody]);
@@ -502,23 +499,13 @@ function initStoredData() {
         counter++;
 
     }, (obj) => {
-        table.append([tableHead, tableBody]);
-        $(`#oldDataStoredInStaticFile`).append(table);
+
         /** in case the each loop finished it starts to emplimant other functions */
         dateCellDetactor();
     });
 }
 
-/** on dropdown menu selector */
-function onCellCleanerChange(value, text, choice) {
-    $(`[cell]`).css(HIDE_CSS_CLASS);
-    $(`[cell='${value}']`).css(SHOW_CSS_CLASS);
-    if (value === "") $(`[cell]`).css(SHOW_CSS_CLASS);
-}
 
-function onRemoveSelectItem(removedValue, removedText, $removedChoice) {
-    $(`[cell='${removedValue}']`).css(HIDE_CSS_CLASS);
-}
 
 /** add popup to row free HTML code */
 function addPopupContent(row) {
@@ -623,8 +610,8 @@ function dateCellDetactor() {
 /** to compair the rows */
 function compairTheDate() {
     /** start to compair dates */
-    var D = 18;
-    var E = 19;
+    var D = "Lieferdatum";
+    var E = "Vertragslaufzeit";
     var F = 1;
     var dateToday = new Date();
     var contracts_termColumn = $(`#oldDataStoredInStaticFile td[cell="${E}"]`);
@@ -634,70 +621,72 @@ function compairTheDate() {
     var parentTable = $(contracts_termColumn).closest("table");
 
 
-    if (parentTable.find("thead").find("tr").find("[cell='-1']").length < 1) {
-        parentTable.find("thead").find("tr").append("<th class='importantHeader' cell='-1'>IMP</th>");
+    if (parentTable.find("thead").find("tr").find("[cell='IMP']").length < 1) {
+        parentTable.find("thead").find("tr").append("<th class='importantHeader' cell='IMP'>IMP</th>");
     } else {
 
     }
 
     // each all cell which contain date
-    delivery_dateColumn.each((i, D) => {
-        var rowID = $(D).parent().attr("id");
-        var checkIfCellExist = $(`#oldDataStoredInStaticFile #${rowID}`).find(`td[hCell='IMP']`);
-        /** in case was the cell which contain the leaft time on */
-        if (checkIfCellExist.length < 1) {
-            var v = new Date();
+    if (delivery_dateColumn.length >= 1) {
+        delivery_dateColumn.each((i, D) => {
+            var rowID = $(D).parent().attr("id");
+            var checkIfCellExist = $(`#oldDataStoredInStaticFile #${rowID}`).find(`td[hCell='IMP']`);
+            /** in case was the cell which contain the leaft time on */
+            if (checkIfCellExist.length < 1) {
+                var v = new Date();
 
-            var delivery_date = $(D).text().split("-");
-            var day = parseInt(delivery_date[0]);
-            var month = parseInt(delivery_date[1]);
-            var year = parseInt(delivery_date[2]);
-            var dToDateObject = new Date(year + "-" + month + "-" + day);
+                var delivery_date = $(D).text().split("-");
+                var day = parseInt(delivery_date[0]);
+                var month = parseInt(delivery_date[1]);
+                var year = parseInt(delivery_date[2]);
+                var dToDateObject = new Date(year + "-" + month + "-" + day);
 
-            var contracts_term = contracts_termColumn[i].textContent;
-            // diffrance days in MS
-            var contracts_termInMS = (contracts_term * 30) * (1000 * 60 * 60 * 24);
-            var contracts_termInDay = (contracts_term * 30);
-            var contracts_termInDMonth = contracts_term;
+                var contracts_term = contracts_termColumn[i].textContent;
+                // diffrance days in MS
+                var contracts_termInMS = (contracts_term * 30) * (1000 * 60 * 60 * 24);
+                var contracts_termInDay = (contracts_term * 30);
+                var contracts_termInDMonth = contracts_term;
 
-            var DA = Date.parse(dateToday) + contracts_termInMS;
-            var leaft = DA - Date.parse(dateToday);
+                var DA = Date.parse(dateToday) + contracts_termInMS;
+                var leaft = DA - Date.parse(dateToday);
 
-            // Date between term and 
-            var DBTaDD = Math.floor((Date.parse(dateToday) - Date.parse(dToDateObject)) / (1000 * 60 * 60 * 24));
+                // Date between term and 
+                var DBTaDD = Math.floor((Date.parse(dateToday) - Date.parse(dToDateObject)) / (1000 * 60 * 60 * 24));
 
 
-            var leaftD = leaft / (1000 * 60 * 60 * 24) - DBTaDD;
-            var leaftM = leaft / (1000 * 60 * 60 * 24 * 30);
-            // in case the contract is not starts yet
+                var leaftD =( leaft / (1000 * 60 * 60 * 24)) - DBTaDD;
+                var leaftM = leaft / (1000 * 60 * 60 * 24 * 30);
+                // in case the contract is not starts yet
+                console.log( leaft / (1000 * 60 * 60 * 24) )
+                if (DBTaDD < 0) {
+                    var td = $(`<td hCell="IMP" >${Math.abs(DBTaDD)} T</td>`);
+                    $(`#oldDataStoredInStaticFile #${rowID}`).append(td);
+                } else {
+                    var td = $(`<td hCell="IMP">${leaftD} D</td>`);
+                    $(`#oldDataStoredInStaticFile #${rowID}`).append(td);
+                }
+                // to detect soon finishing term of any cotract
+                if (leaftD > 90 && leaftD <= 180) {
+                    td.addClass("WORN");
+                } else if (leaftD < 90 && leaftD > 0) {
+                    td.addClass("DENG");
+                    td.transition('set looping').transition('pulse', '500ms');
+                } else if (leaftD > 180) {
+                    td.addClass("POSITIVE");
+                } else if (leaftD < 0) {
+                    td.text(`${Math.abs(leaftD)} D ago`);
+                    td.addClass("DENGL2");
+                    td.transition('set looping').transition('pulse', '500ms');
+                }
 
-            if (DBTaDD < 0) {
-                var td = $(`<td hCell="IMP" >${Math.abs(DBTaDD)} T</td>`);
-                $(`#oldDataStoredInStaticFile #${rowID}`).append(td);
+                addPopupContent($(`#${rowID}`));
             } else {
-                var td = $(`<td hCell="IMP">${leaftD} D</td>`);
-                $(`#oldDataStoredInStaticFile #${rowID}`).append(td);
-            }
-            // to detect soon finishing term of any cotract
-            if (leaftD > 90 && leaftD <= 180) {
-                td.addClass("WORN");
-            } else if (leaftD < 90 && leaftD > 0) {
-                td.addClass("DENG");
-                td.transition('set looping').transition('pulse', '500ms');
-            } else if (leaftD > 180) {
-                td.addClass("POSITIVE");
-            } else if (leaftD < 0) {
-                td.text(`${Math.abs(leaftD)} D ago`);
-                td.addClass("DENGL2");
-                td.transition('set looping').transition('pulse', '500ms');
+                /** in case the column of IMP data is exist or not */
             }
 
-            addPopupContent($(`#${rowID}`));
-        } else {
-            /** in case the column of IMP data is exist or not */
-        }
-
-    });
+        });
+    }
     appendedOne = true;
 
 }
@@ -705,26 +694,32 @@ function compairTheDate() {
 
 /** the static file table row click action */
 function secounderyTableRowClick(event) {
+
+    var currentRow = this;
+
     if (event.altKey && event.ctrlKey) {
+        console.log(currentRow)
         var F = createOrOpenFile("staticData.json");
-        var sheetName = $(this).attr("sheetname");
-        var rowID = $(this).attr("id");
-        F[sheetName][$(this).attr("id")]
+        var sheetName = $($(currentRow).closest("table").get(0)).attr("id");
+        var rowID = $(currentRow).attr("id");
+        F[sheetName][$(currentRow).attr("id")]
         delete F[sheetName][rowID];
         writeNewDataToFile("staticData.json", F);
         // i have to remove this object from file
-        $(this).transition({
+        $(currentRow).transition({
             animation: 'horizontal flip',
             onComplete: () => {
-                $(this).remove();
+                $(currentRow).remove();
                 $(`#uploadeFileHiddenBtn`).change();
             }
         });
-        if (Object.keys(F[sheetName]).length === 1) {
-            $(this).parent().parent().transition({
+        if (Object.keys(F[sheetName]).length === 0) {
+            delete F[sheetName];
+            writeNewDataToFile("staticData.json", F);
+            $($(currentRow).closest("table").get(0)).transition({
                 animation: 'horizontal flip',
                 onComplete: () => {
-                    $(this).parent().parent().remove();
+                    $($(currentRow).closest("table").get(0)).remove();
                     $(`#uploadeFileHiddenBtn`).change();
                 }
             })
