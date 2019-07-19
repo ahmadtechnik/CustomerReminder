@@ -64,6 +64,4 @@ typings/
 staticData.json
 
 #ignore CSV/XLSX data
-*.csv
-*.xlsx
-*.CSV
+/test
