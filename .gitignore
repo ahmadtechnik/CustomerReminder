@@ -63,7 +63,7 @@ typings/
 #ignore static data
 staticData.json
 
-#ignore CSV data
-*.csv
+#ignore CSV/XLSX data
+13179-order.csv
 *.xlsx
 *.CSV
