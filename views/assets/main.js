@@ -2,6 +2,7 @@ var XLSX = require("xlsx");
 var FS = require("fs");
 var PATH = require("path");
 var MD = require("md5");
+var OPENURL = require("openurl");
 // add new funciton To jQuery 
 
 $.eachSync = (obj, resu, end, start) => {
@@ -82,9 +83,9 @@ function onFileUploadedAction() {
                                 F[sheetName] = {}
                                 writeNewDataToFile("staticData.json", F);
                             }
-                            /**  create row hash */
+                            /** create row hash */
                             $.eachSync(jsonSheet, (i, row) => {
-                                jsonSheet[i]["hash"] = MD(Object.values(row).join("-"));
+                                jsonSheet[i]["#hash"] = MD(Object.values(row).join("-"));
                             }, () => {
                                 FILEDATA[sheetName] = jsonSheet;
                             });
@@ -185,24 +186,24 @@ var searchMethods = {
                         var tableBody = $(`<tbody></tbody>`);
                         /** each search table result header */
                         $.eachSync(tableHeader, (i, cell) => {
-                                cell !== "hash" ? trHead.append(`<th>${cell}</th>`) : "";
+                                cell.charAt(0) !== "#" ? trHead.append(`<th>${cell}</th>`) : "";
                             }
                             // after finisheing add the header
                             , (tableHeader) => {
                                 /** each result rows */
                                 $.eachSync(foundedRows, (i, row) => {
-                                    var addedBefore = F[sheetHash][row["hash"]] === undefined ? false : true;
+                                    var addedBefore = F[sheetHash][row["#hash"]] === undefined ? false : true;
 
                                     var tableBodyRow =
-                                        $(`<tr index="${i}" id="${foundedRows[i]["hash"]}" rowClick="true" sheetHash="${sheetHash}"></tr>`);
+                                        $(`<tr index="${i}" id="${foundedRows[i]["#hash"]}" rowClick="true" sheetHash="${sheetHash}"></tr>`);
                                     /** each row cells */
                                     var counter = 0;
 
                                     tableBody.append(tableBodyRow);
                                     addedBefore ? tableBodyRow.addClass("disabled") : "";
                                     $.eachSync(row, (i, cell) => {
-                                        i !== "hash" ? tableBodyRow.append(`<td cell="${counter}">${cell}</td>`) : "";
-                                        i !== "hash" ? counter++ : "";
+                                        i.charAt(0) !== "#" ? tableBodyRow.append(`<td cell="${counter}">${cell}</td>`) : "";
+                                        i.charAt(0) !== "#" ? counter++ : "";
                                     }, (row) => {
                                         tableHead.append(trHead);
                                         tableE.append([tableHead, tableBody]);
@@ -240,7 +241,6 @@ var searchMethods = {
 var CHOOSED_ROW_TABLE_ID = "";
 
 function onCellClickAction(event) {
-    console.log("clicked");
     var currentRow = this;
     var rowID = currentRow.getAttribute("id");
     var cellsInRow = $(currentRow).find("td");
@@ -265,7 +265,7 @@ function onCellClickAction(event) {
         }
     });
 
-    $(`#dinamicModalHeader`).html(`<h1>VP-Name : ${rowID}</h1>`);
+    $(`#dinamicModalHeader`).html(`<h1>VP-HASH : <span class="redWhite">${rowID}</span></h1>`);
 
 
     var gridPure = $(`<div class="ui two column grid stackable divided celled"></div>`);
@@ -292,10 +292,10 @@ function onCellClickAction(event) {
             .append(`<div class="ui placeholder segment inverted secondary ">
             <div class="ui icon header">
               <i class="pdf file outline icon"></i>
-              No documents are listed for this customer.
+              <span id="uploadedFileRowInfo">No documents are listed for this customer.</span>
             </div>
             <div class="ui primary button" onclick="$('#uploadAttachedElementsToRow').click()">Add Document</div>
-            <input type="file" class="hidden" id="uploadAttachedElementsToRow"/>
+            <input type="file" class="hidden" id="uploadAttachedElementsToRow" rowHash="${rowID}"/>
           </div>`)
         ])
     ));
@@ -322,9 +322,37 @@ function onCellClickAction(event) {
         onHidden: onInsertDataModalHidden
     }).modal("show");
     /** add action for upload attached files btn */
-    $(`#uploadAttachedElementsToRow`).change((target) => {
+    $(`#uploadAttachedElementsToRow`).change(onUploadFileToRowAction);
+}
+/** 
+ * on upload file btn change
+ * in case the user uploaded file to user
+ * it should be saved 
+ *  */
+var UPLOADEDFILE = null;
+var onUploadFileToRowAction = (event) => {
+    var file = event.target.files[0];
+    if (file !== undefined) {
+        UPLOADEDFILE = {};
+        var fileName = file.name;
+        var fileType = file.type;
+        var fileSize = file.size;
+        var rowID = $(event.target).attr("rowHash");
+        UPLOADEDFILE["fileExtention"] = fileName.split(".").pop();
+        UPLOADEDFILE["file"] = file;
+        UPLOADEDFILE["rowID"] = rowID;
+        var uploadedFileData = `Name: ${fileName}<br>Type : ${fileType}<br>Size: ${(fileSize / 1024 ).toFixed(2)}KB`;
+        $(`#uploadedFileRowInfo`).html(uploadedFileData);
+        var v = new FileReader();
+        v.onload = (f) => {
 
-    });
+        };
+        v.readAsArrayBuffer(file);
+    } else {
+        UPLOADEDFILE["file"] = null;
+        $(`#uploadedFileRowInfo`).html("No documents are listed for this customer.");
+    }
+
 }
 
 /** */
@@ -341,6 +369,7 @@ function onInsertDataModalHidden(modal) {
     $(`#dinamicModalAcitons`).html("");
     $(`#dinamicModalContent`).html("");
     $("#delivery_date").datepicker("destroy");
+    UPLOADEDFILE = null;
 }
 /** */
 function onInsertDataModalOnApprove(modal) {
@@ -357,7 +386,6 @@ function onInsertDataModalOnApprove(modal) {
     } else {
         var oldDataStored = createOrOpenFile("staticData.json");
 
-
         /** push the new values to row  */
         var sheetname = $(`#${CHOOSED_ROW_TABLE_ID}`).attr("sheetHash");
         var indexNum = $(`#${CHOOSED_ROW_TABLE_ID}`).attr("index");
@@ -372,7 +400,8 @@ function onInsertDataModalOnApprove(modal) {
             rowToAdd["Lieferdatum"] = delivery_date;
             rowToAdd["Vertragslaufzeit"] = contracts_term;
             rowToAdd["Notiz"] = notes;
-
+            /** add flag that this row have file */
+            if (UPLOADEDFILE !== null) rowToAdd["#file"] = UPLOADEDFILE.fileExtention;
 
             // in case the row was not exist in the sheet object
             if (oldDataStored[sheetname][CHOOSED_ROW_TABLE_ID] === undefined) {
@@ -381,10 +410,10 @@ function onInsertDataModalOnApprove(modal) {
                 $(`.sheetsContainer #${CHOOSED_ROW_TABLE_ID}`).addClass("disabled");
                 writeNewDataToFile("staticData.json", oldDataStored);
                 console.log("New Row Added to sheet object");
+
             } else {
                 // ask user if he would like to update the old data
                 console.log("THIS ROW IS  EXIST IN STATIC FILE");
-
             }
         } else {
             /**
@@ -392,7 +421,25 @@ function onInsertDataModalOnApprove(modal) {
              */
             console.log("SHEET NAME IS NOT DEFINED IN STATIC FILE");
         }
-
+        /**
+         *  check if the file to row was uploaded or 
+         *  there any file has the same name as the row hash 
+         * */
+        if (UPLOADEDFILE !== null) {
+            var fileReader = new FileReader();
+            fileReader.readAsArrayBuffer(UPLOADEDFILE.file);
+            /** */
+            fileReader.onload = (f) => {
+                /** check if the storage dir exist or not */
+                FS.existsSync(PATH.join(__dirname, "..", "storage")) ? "" : FS.mkdirSync(PATH.join(__dirname, "..", "storage"));
+                FS.writeFileSync(PATH.join(__dirname, "..", "storage", UPLOADEDFILE.rowID + "." + UPLOADEDFILE.fileExtention),
+                    new Uint16Array(f.target.result)
+                );
+            }
+            fileReader.onloadend = () => {
+                UPLOADEDFILE = null;
+            }
+        }
         initStoredData();
         return true;
     }
@@ -466,8 +513,7 @@ function initStoredData() {
                 if (!headerOfCurrentSheetAdded) {
                     var emptyTableRow = $(`<tr id="${sheetName}"></tr>`);
                     $.eachSync(rowHeader, (i, v) => {
-                        if (v !== "hash") {
-
+                        if (v.charAt(0) !== "#") {
                             emptyTableRow.append(`<th cell="${v}" >${v}</th>`);
                         }
                     }, (rowHeader) => {
@@ -480,12 +526,17 @@ function initStoredData() {
 
                 /** in case the header of secoundery table was drawed */
                 var emptyTableRow = $(`<tr class="" id="${i}" sheetName="${sheetName}" ></tr>`);
-                var rowTableBodyLength = Object.keys(row).length;
+
                 /**
                  * each rows which are not table body
+                 * to get each single cell
                  */
                 $.eachSync(row, (i, v) => {
-                    if (i !== "hash") {
+                    /** 
+                     * it does not have to show some field to user 
+                     * such as any field which has # sign at first char
+                     *  */
+                    if (i.charAt(0) !== "#") {
                         var datesPoints = v.match(regularEx.datesPoints);
                         if (datesPoints) {
                             /** replace the point with slash */
@@ -494,12 +545,24 @@ function initStoredData() {
                         emptyTableRow.append(`<td hCell="${i}" cell="${i}" >${v}</td>`);
                     }
                 }, (row) => {
+                    /** 
+                     * in case the current row have a file or not
+                     */
+                    if (row['#file']) {
+                        var linkToFile = PATH.join(__dirname, "..", "storage", row["#hash"] + "." + row["#file"]);
+                        var linkToFileBtn = $(`<a ><i class="file pdf loading icon"></i></a>`);
 
+                        /** add click action to a btn */
+                        linkToFileBtn.click((event) => {
+                            OPENURL.open("file://" + linkToFile);
+                        });
+                        var newTEXT = emptyTableRow.find("td[cell='Auftr.-Nr.']").text();
+                        emptyTableRow.find("td[cell='Auftr.-Nr.']").html([newTEXT, linkToFileBtn]);
+                    }
                 });
-                // add popup to sub data row of the table
+                /** set click event to every row */
                 emptyTableRow.click(secounderyTableRowClick);
                 tableBody.append(emptyTableRow);
-
             }, (sheet) => {
                 table.append([tableHead, tableBody]);
                 $(`#oldDataStoredInStaticFile`).append(table);
@@ -635,9 +698,7 @@ function compairTheDate() {
 
 
     if (parentTable.find("thead").find("tr").find("[cell='IMP']").length < 1) {
-        parentTable.find("thead").find("tr").append("<th class='importantHeader' cell='IMP'>IMP</th>");
-    } else {
-
+        parentTable.find("thead").find("tr").prepend("<th class='importantHeader' cell='IMP'>IMP</th>");
     }
 
     // each all cell which contain date
@@ -666,17 +727,15 @@ function compairTheDate() {
                 // Date between term and 
                 var DBTaDD = Math.floor((Date.parse(dateToday) - Date.parse(dToDateObject)) / (1000 * 60 * 60 * 24));
 
-
                 var leaftD = (leaft / (1000 * 60 * 60 * 24)) - DBTaDD;
                 var leaftM = leaft / (1000 * 60 * 60 * 24 * 30);
                 // in case the contract is not starts yet
-                console.log(leaft / (1000 * 60 * 60 * 24))
                 if (DBTaDD < 0) {
                     var td = $(`<td hCell="IMP" >${Math.abs(DBTaDD)} T</td>`);
-                    $(`#oldDataStoredInStaticFile #${rowID}`).append(td);
+                    $(`#oldDataStoredInStaticFile #${rowID}`).prepend(td);
                 } else {
                     var td = $(`<td hCell="IMP">${leaftD} D</td>`);
-                    $(`#oldDataStoredInStaticFile #${rowID}`).append(td);
+                    $(`#oldDataStoredInStaticFile #${rowID}`).prepend(td);
                 }
                 // to detect soon finishing term of any cotract
                 if (leaftD > 90 && leaftD <= 180) {
@@ -706,15 +765,24 @@ function compairTheDate() {
 
 /** the static file table row click action */
 function secounderyTableRowClick(event) {
-
-    var currentRow = this;
-/** */
+    var F = createOrOpenFile("staticData.json");
+    var currentRow = $(this);
+    /** in case the user wanted to remove row from Table */
     if (event.altKey && event.ctrlKey) {
-        console.log(currentRow)
         var F = createOrOpenFile("staticData.json");
         var sheetName = $($(currentRow).closest("table").get(0)).attr("id");
         var rowID = $(currentRow).attr("id");
-        F[sheetName][$(currentRow).attr("id")]
+        F[sheetName][$(currentRow).attr("id")];
+
+        // check if this row has file attached.
+        // then remove the file
+        F[sheetName][rowID]["#file"] !== undefined ?
+            // remove the binded file 
+            FS.unlink(PATH.join(__dirname, "..", "storage", rowID + "." + F[sheetName][rowID]["#file"]), (err) => {
+                if (err) alert("ERROR : " + err);
+            }) :
+            "";
+
         delete F[sheetName][rowID];
         writeNewDataToFile("staticData.json", F);
         // i have to remove this object from file
@@ -740,7 +808,29 @@ function secounderyTableRowClick(event) {
     }
     /** in case user does not press both alt keys */
     else {
+        /** each every cell */
+        var rowID = currentRow.attr("id")
+        var sheetName = currentRow.attr("sheetname");
+        var rowData = F[sheetName][rowID];
+        var previewDataContainer = $(`#newDataToRows`);
+        var paragraphContainer = $(`<div class="ui segment inverted orange basic"></div>`);
+        var leftDays = currentRow.find("td[hcell='IMP']").text();
+        
+        /** each row data to post it into segment */
+        paragraphContainer.append($(`<h1>${leftDays}</h1>`))
+        $.eachSync(rowData, (i, cell) => {
+            if (i.charAt(0) === "#") return false;
+            paragraphContainer
+            .append(`<span class="withoutPadding">
+            <span class="">${i}</span> : <span class="blueWhite boldFont">${cell}</span>
+            </span><br>`);
+        });
+        /** append the accessoires of the row data */
+        var segmentsContainer = $(`<div class="ui segments"></div>`);
 
+        previewDataContainer.html([
+            paragraphContainer
+        ]);
     }
 }
 

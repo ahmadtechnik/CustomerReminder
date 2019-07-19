@@ -30,7 +30,7 @@
 }
 
 .blueWhite {
-    background: blue;
+    background: DodgerBlue;
     color: white;
 }
 
@@ -82,16 +82,28 @@
     background-color: #f54242 !important;
     color: white !important;
     text-align: center !important;
+    
 }
 
 .newDataToRows {
     width: 30%;
+    max-height: 500px;
+    overflow-x: scroll;
 }
 
 .oldDataStoredInStaticFile {
     width: 70%;
+  
+    max-height: 500px;
 }
 
 .hidden {
     display: none !important;
+}
+
+tr{
+    cursor: pointer;
+}
+.withoutPadding{
+    padding-bottom: 0px !important;
 }
