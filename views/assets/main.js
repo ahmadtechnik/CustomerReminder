@@ -708,7 +708,7 @@ function compairTheDate() {
 function secounderyTableRowClick(event) {
 
     var currentRow = this;
-
+/** */
     if (event.altKey && event.ctrlKey) {
         console.log(currentRow)
         var F = createOrOpenFile("staticData.json");
@@ -725,6 +725,7 @@ function secounderyTableRowClick(event) {
                 $(`#uploadeFileHiddenBtn`).change();
             }
         });
+        /** to check if  the current sheet have any more rows */
         if (Object.keys(F[sheetName]).length === 0) {
             delete F[sheetName];
             writeNewDataToFile("staticData.json", F);
