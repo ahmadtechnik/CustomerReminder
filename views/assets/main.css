@@ -107,3 +107,9 @@ tr{
 .withoutPadding{
     padding-bottom: 0px !important;
 }
+.spical {
+    background-color: Tomato !important;
+    color: white !important;
+    border-radius: 10px 100px / 120px;
+    padding: 10px !important;
+}

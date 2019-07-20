@@ -30,6 +30,10 @@ $(document).ready(() => {
     $('#uploadFileAccordion').accordion();
     //
     initStoredData();
+    //
+    $(document).keydown(onDocumentEvents.onKeydown);
+    $(document).keyup(onDocumentEvents.onKeyup);
+    $(document).keypress(onDocumentEvents.onPress);
 });
 
 var SELECT_CLASS = ["ui", "segment", "teal", "inverted", "basic"];
@@ -318,7 +322,6 @@ function onCellClickAction(event) {
         closable: false,
         onVisible: onInsertDataModalShow,
         onApprove: onInsertDataModalOnApprove,
-        onDeny: onInsertDataModalOnDeny,
         onHidden: onInsertDataModalHidden
     }).modal("show");
     /** add action for upload attached files btn */
@@ -339,13 +342,14 @@ var onUploadFileToRowAction = (event) => {
         var fileSize = file.size;
         var rowID = $(event.target).attr("rowHash");
         UPLOADEDFILE["fileExtention"] = fileName.split(".").pop();
-        UPLOADEDFILE["file"] = file;
         UPLOADEDFILE["rowID"] = rowID;
         var uploadedFileData = `Name: ${fileName}<br>Type : ${fileType}<br>Size: ${(fileSize / 1024 ).toFixed(2)}KB`;
         $(`#uploadedFileRowInfo`).html(uploadedFileData);
         var v = new FileReader();
+        var file = $(`#uploadAttachedElementsToRow`).get(0).files[0];
+        console.log();
         v.onload = (f) => {
-
+            UPLOADEDFILE["file"] = f.target.result;
         };
         v.readAsArrayBuffer(file);
     } else {
@@ -427,17 +431,18 @@ function onInsertDataModalOnApprove(modal) {
          * */
         if (UPLOADEDFILE !== null) {
             var fileReader = new FileReader();
-            fileReader.readAsArrayBuffer(UPLOADEDFILE.file);
+            var file = $(`#uploadAttachedElementsToRow`).get(0).files[0];
+            fileReader.readAsArrayBuffer(file);
             /** */
             fileReader.onload = (f) => {
                 /** check if the storage dir exist or not */
                 FS.existsSync(PATH.join(__dirname, "..", "storage")) ? "" : FS.mkdirSync(PATH.join(__dirname, "..", "storage"));
-                FS.writeFileSync(PATH.join(__dirname, "..", "storage", UPLOADEDFILE.rowID + "." + UPLOADEDFILE.fileExtention),
-                    new Uint16Array(f.target.result)
-                );
-            }
-            fileReader.onloadend = () => {
-                UPLOADEDFILE = null;
+                FS.writeFile(PATH.join(__dirname, "..", "storage", UPLOADEDFILE.rowID + "." + UPLOADEDFILE.fileExtention),
+                    new Uint16Array(UPLOADEDFILE["file"]), (err) => {
+                        if (!err) {
+                            UPLOADEDFILE = null;
+                        };
+                    });
             }
         }
         initStoredData();
@@ -445,11 +450,6 @@ function onInsertDataModalOnApprove(modal) {
     }
 
 }
-
-function onInsertDataModalOnDeny(modal) {
-
-}
-
 
 /** */
 function createOrOpenFile(fileName) {
@@ -813,24 +813,67 @@ function secounderyTableRowClick(event) {
         var sheetName = currentRow.attr("sheetname");
         var rowData = F[sheetName][rowID];
         var previewDataContainer = $(`#newDataToRows`);
-        var paragraphContainer = $(`<div class="ui segment inverted orange basic"></div>`);
-        var leftDays = currentRow.find("td[hcell='IMP']").text();
-        
+
+        var paragraphContainer = $(`<div class="ui segment orange"></div>`);
+        var leftDays = currentRow.find("td[hcell='IMP']");
         /** each row data to post it into segment */
-        paragraphContainer.append($(`<h1>${leftDays}</h1>`))
+        var bgColor = "background-color : " + leftDays.css("background-color") + " ;";
+        /**
+         * 
+         */
+        paragraphContainer
+            .append($(`<h1 class="ui centered header" style="${bgColor}">${leftDays.text()}</h1><div class="ui clearing divider"></div>`));
+        /**
+         * 
+         */
+        var list = $(`<div class="ui middle aligned list"></div>`);
+        /** each row cells to print them as a list */
         $.eachSync(rowData, (i, cell) => {
             if (i.charAt(0) === "#") return false;
-            paragraphContainer
-            .append(`<span class="withoutPadding">
-            <span class="">${i}</span> : <span class="blueWhite boldFont">${cell}</span>
-            </span><br>`);
-        });
-        /** append the accessoires of the row data */
-        var segmentsContainer = $(`<div class="ui segments"></div>`);
+            var listItem = $(`<a class="item spical"></a>`);
+            var itemIcon = $(`<i class="hand point right icon"></i>`);
+            var listContent = $(`<div class="content"></div>`);
+            var listHeader = $(`<div class="header">${i}</div>`);
+            var listDisc = $(`<div class="description"> ----> <span class="boldFont">${cell}</span></div>`);
+            /** to add mark for every spical list item */
+            switch (i) {
+                case "Telefonnummer":
+                    listItem.click(listActions.sendSMS);
+                    break;
+                case "Anschrift":
+                    listItem.click(listActions.sendLetter);
+                    break;
+                case "Kundennummer":
+                    listItem.click(listActions.costumerNumber);
+                    break;
+                default:
+                    listItem.removeClass("spical");
+                    break;
+            }
 
-        previewDataContainer.html([
-            paragraphContainer
-        ]);
+            listContent.html([listHeader, listDisc]);
+            listItem.html([itemIcon, listContent]);
+            list.append(listItem);
+        }, (rowData) => {
+            paragraphContainer.append(list);
+            /** append the accessoires of the row data */
+            previewDataContainer.html([
+                paragraphContainer,
+            ]);
+            $(`.spical`).transition('horizontal flip in')
+        });
+    }
+}
+/** actions to list of row data showed */
+var listActions = {
+    sendSMS: (event) => {
+
+    },
+    sendLetter: (event) => {
+
+    },
+    costumerNumber: (event) => {
+
     }
 }
 
@@ -851,6 +894,23 @@ function onSearchMethodSelector(item) {
     $(`div[by]`).css(HIDE_CSS_CLASS);
     $(`div[by='${item}']`).css(SHOW_CSS_CLASS);
 }
+/** whole document actions  */
+var KEYPRESSEDONDOCOMENT = null;
+var PRESSMSCOUNTER = 0;
+var onDocumentEvents = {
+    onKeydown: (event) => {
+        KEYPRESSEDONDOCOMENT = event.keyCode;
+        PRESSMSCOUNTER++;
+        if (KEYPRESSEDONDOCOMENT === 122 || KEYPRESSEDONDOCOMENT === 91) return false;
+    },
+    onKeyup: (event) => {
+        KEYPRESSEDONDOCOMENT = null;
+        PRESSMSCOUNTER = 0;
+    },
+    onPress: () => {
+
+    }
+};
 
 /**
  * TO ADD
