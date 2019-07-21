@@ -21,7 +21,7 @@ function appOnReady() {
             nodeIntegration: true
         }
     });
-
+    MainWindow.webContents.setUserAgent("CostumerReminder");
     MainWindow.loadFile("./views/index.html");
     MainWindow.on("close", WindowOnClose)
 }

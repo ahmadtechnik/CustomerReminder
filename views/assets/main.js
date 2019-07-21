@@ -3,7 +3,14 @@ var FS = require("fs");
 var PATH = require("path");
 var MD = require("md5");
 var OPENURL = require("openurl");
+var NETCONNECTION = require("internet-available");
+var MAC = require("getmac");
+
 // add new funciton To jQuery 
+MAC.getMac(function (err, macAddress) {
+    if (err) alert("COULD NOT GET MAC ADDRESS...");
+    GM = macAddress;
+});
 
 $.eachSync = (obj, resu, end, start) => {
     start && start(obj);
@@ -284,14 +291,17 @@ function onCellClickAction(event) {
     rightSectionColumn.html($(
         $(`<div class="ui form large" id="insertNewDataForm"></div>`)
         .append([
-            $(`<div class="field"></div>`)
+            $(`<div class="field" imp='true'></div>`)
             .append([`<label>Kundennummer<label>`, `<input type="text" id="customer_number"/>`]),
-            $(`<div class="field"></div>`)
+            $(`<div class="field" imp='true'></div>`)
             .append([`<label>Lieferdatum<label>`, `<input type="text" id="delivery_date" readonly="readonly" />`]),
-            $(`<div class="field"></div>`)
+            $(`<div class="field" imp='true'></div>`)
             .append([`<label>Laufzeit des vertrags <span class="redWhite">in Months</span><label>`, `<input type="text" id="contracts_term" />`]),
-            $(`<div class="field"></div>`)
-            .append([`<label>hinweise<label>`, `<textarea rows="2" id="notes"></textarea>`])
+            $(`<div class="field" ></div>`)
+            .append([`<label>e-mail address <span class="redWhite">if exist</span><label><label>`,
+                `<input type="text" id="emailAddress" />`
+            ]),
+            $(`<div class="field"></div>`).append([`<label>hinweise<label>`, `<textarea rows="2" id="notes"></textarea>`])
             // append the upload btn 
             .append(`<div class="ui placeholder segment inverted secondary ">
             <div class="ui icon header">
@@ -380,9 +390,10 @@ function onInsertDataModalOnApprove(modal) {
     var customer_number = $(`#customer_number`).val();
     var delivery_date = $("#delivery_date").datepicker().val();
     var contracts_term = $(`#contracts_term`).val();
+    var emailAddress = $(`#emailAddress`).val();
     var notes = $(`#notes`).val();
     if (customer_number === "" || delivery_date === "" || contracts_term === "") {
-        var fields = $(`#customer_number`).closest(".ui.form").find(".field");
+        var fields = $(`#customer_number`).closest(".ui.form").find("[imp='true']");
         fields.each((i, e) => {
             $(e).find("input").val() !== undefined && $(e).find("input").val() === "" ? $(e).addClass("error") : $(e).removeClass("error");
         });
@@ -403,6 +414,7 @@ function onInsertDataModalOnApprove(modal) {
             rowToAdd["Kundennummer"] = customer_number;
             rowToAdd["Lieferdatum"] = delivery_date;
             rowToAdd["Vertragslaufzeit"] = contracts_term;
+            rowToAdd["Email"] = emailAddress;
             rowToAdd["Notiz"] = notes;
             /** add flag that this row have file */
             if (UPLOADEDFILE !== null) rowToAdd["#file"] = UPLOADEDFILE.fileExtention;
@@ -518,6 +530,7 @@ function initStoredData() {
                         }
                     }, (rowHeader) => {
                         headerOfCurrentSheetAdded = true;
+                        console.log(rowHeader)
                     });
                     tableHead.append(emptyTableRow);
                     headerOfCurrentSheetAdded = true;
@@ -688,22 +701,19 @@ function compairTheDate() {
     /** start to compair dates */
     var D = "Lieferdatum";
     var E = "Vertragslaufzeit";
-    var F = 1;
+    var F = "Geburtsdatum";
     var dateToday = new Date();
     var contracts_termColumn = $(`#oldDataStoredInStaticFile td[cell="${E}"]`);
     var delivery_dateColumn = $(`#oldDataStoredInStaticFile td[cell="${D}"]`);
-    var order_numberColumn = $(`#oldDataStoredInStaticFile td[cell="${F}"]`);
+    var order_numberColumn = $(`td[cell="${F}"]`);
     /** start append the new column to the parent table */
     var parentTable = $(contracts_termColumn).closest("table");
-
-
     if (parentTable.find("thead").find("tr").find("[cell='IMP']").length < 1) {
         parentTable.find("thead").find("tr").prepend("<th class='importantHeader' cell='IMP'>IMP</th>");
     }
-
     // each all cell which contain date
     if (delivery_dateColumn.length >= 1) {
-        delivery_dateColumn.each((i, D) => {
+        $.eachSync(delivery_dateColumn, (i, D) => {
             var rowID = $(D).parent().attr("id");
             var checkIfCellExist = $(`#oldDataStoredInStaticFile #${rowID}`).find(`td[hCell='IMP']`);
             /** in case was the cell which contain the leaft time on */
@@ -755,15 +765,39 @@ function compairTheDate() {
             } else {
                 /** in case the column of IMP data is exist or not */
             }
-
-        });
+        }, (delivery_dateColumn) => {});
     }
-    appendedOne = true;
+    var MONTHES = [];
+    /** detect Date of birth of costumer */
+    $.eachSync(order_numberColumn, (i, cell) => {
+        var dateOfBirth = $(cell).text();
+        // date of Birth of costomer DAY , MONTH , YEAR
+        var day = parseInt(dateOfBirth.split("-")[0]);
+        var month = parseInt(dateOfBirth.split("-")[1]);
+        var year = dateOfBirth.split("-")[2];
+        var dateMS = Date.parse(month + "-" + day + "-" + year);
+        // date today DAY , MONTH , YEAR
+        var dayToday = new Date().getDate();
+        var monthToday = new Date().getMonth() + 1;
+        var yearToday = new Date().getFullYear();
+        var todayMS = Date.parse(new Date());
+        // 
+        var customerAge = Math.floor((todayMS - dateMS) / (1000 * 60 * 60 * 24 * 365.25));
+        if (day === dayToday && month === monthToday) { //
+            var cakeIcon = $(`<a>${customerAge + 1 } <i class="birthday cake icon"></i></a>`);
+            $(cell).html([
+                cakeIcon,
+                dateOfBirth
+            ]);
+        }
 
+    });
 }
 
 
 /** the static file table row click action */
+var SELECTEDROW = null;
+
 function secounderyTableRowClick(event) {
     var F = createOrOpenFile("staticData.json");
     var currentRow = $(this);
@@ -805,6 +839,7 @@ function secounderyTableRowClick(event) {
                 }
             })
         }
+        $(`#newDataToRows`).html("");
     }
     /** in case user does not press both alt keys */
     else {
@@ -813,7 +848,7 @@ function secounderyTableRowClick(event) {
         var sheetName = currentRow.attr("sheetname");
         var rowData = F[sheetName][rowID];
         var previewDataContainer = $(`#newDataToRows`);
-
+        SELECTEDROW = rowData;
         var paragraphContainer = $(`<div class="ui segment orange"></div>`);
         var leftDays = currentRow.find("td[hcell='IMP']");
         /** each row data to post it into segment */
@@ -863,11 +898,11 @@ function secounderyTableRowClick(event) {
             $(`.spical`).transition('horizontal flip in')
         });
     }
-}
+};
 /** actions to list of row data showed */
 var listActions = {
     sendSMS: (event) => {
-
+        $("#responseReciverContainer").load(PATH.join(__dirname, "modals", "sendSMS.html"));
     },
     sendLetter: (event) => {
 

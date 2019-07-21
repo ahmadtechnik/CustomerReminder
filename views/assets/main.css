@@ -25,8 +25,8 @@
 }
 
 .redWhite {
-    background: red;
-    color: white;
+    background: red !important;
+    color: white !important;
 }
 
 .blueWhite {

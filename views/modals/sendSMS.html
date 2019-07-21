@@ -1,0 +1,75 @@
+<div class="ui modal " id="sendSMSmodal">
+    <!--  -->
+    <div class="header" id="SENDSMSMODALHEADER">
+        <h1 class="DENG"></h1>
+    </div>
+    <!--  -->
+    <div class="content scrolling ">
+        <div class="ui grid">
+            <!--  -->
+            <div class="sixteen wide column">
+                <div class="ui form">
+                    <div class="ui field full wide">
+                        <input type="text" disabled id="phoneNumberInputField">
+                    </div>
+                </div>
+            </div>
+            <!--  -->
+            <div class="two column row">
+                <!-- SMS message sender -->
+                <div class="column" id="smsSenderContainer">
+
+                </div>
+                <!-- Whatsapp Message Sender -->
+                <div class="column" id="whatsappSenderContainer">
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--  -->
+    <div class="actions">
+        <div class="ui ok button blue">OK</div>
+    </div>
+</div>
+<script id="removeAfterScript">
+    /**  **/
+    var modalActions = {
+        /****/
+        onShow: (modal) => {
+
+            if (SELECTEDROW !== null) {
+                /** Draw modal header **/
+                $(`#SENDSMSMODALHEADER h1`).html(
+                    "Messaging to : " +
+                    SELECTEDROW["Kunden"] +
+                    ",<span > " + SELECTEDROW["Telefonnummer"] + "</span>"
+                );
+                /** Show phone number to user **/
+                $(`#phoneNumberInputField`).val("TO : "  +SELECTEDROW["Telefonnummer"]);
+                /** bring content of other secotin of the modal **/
+                $(`#smsSenderContainer`).load(PATH.join(__dirname, "modals", "smsMessageContent.html"));
+                $(`#whatsappSenderContainer`).load(PATH.join(__dirname, "modals", "whatsappSenderContent.html"));
+            }
+
+        },
+        /****/
+        onHidden: (modal) => {
+            $(`#removeAfterScript`).html("");
+            $(`#responseReciverContainer`).html("");
+            $(`#sendSMSmodal`).remove();
+        },
+        /****/
+        onApprove: (modal) => {
+
+        }
+    };
+
+    /**  **/
+    $(`#sendSMSmodal`).modal({
+        onShow: modalActions.onShow,
+        onHidden: modalActions.onHidden,
+        onApprove: modalActions.onApprove,
+        closable: false
+    }).modal("show");
+</script>

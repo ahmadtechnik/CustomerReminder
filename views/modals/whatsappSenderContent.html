@@ -1,0 +1,31 @@
+<div class="ui form">
+    <div class="field">
+        <label for="templateSelector">Select Whatsapp message Template</label>
+        <input type="text" class="dropdown">
+    </div>
+    <div class="field">
+        <label for="">Message Template</label>
+        <textarea></textarea>
+    </div>
+    <div class="field">
+        <div class="ui button green right floated" id="whatsappMessageSenderBtnSubmit">
+            Send
+        </div>
+    </div>
+</div>
+<script>
+    $(`#whatsappMessageSenderBtnSubmit`).click((event) => {
+        /** Check internet connectivity **/
+        NETCONNECTION().then(function () {
+            $.post("https://controller.ah-t.de/", {
+                dv: GM,
+                rt: "SENDWHATSAPP",
+                row: SELECTEDROW
+            }, (response) => {
+                console.log(response);
+            });
+        }).catch(function () {
+            alert("THERE IS NO INTERNET CONNECTION");
+        });
+    });
+</script>

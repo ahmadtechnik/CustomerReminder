@@ -20,6 +20,8 @@
   "homepage": "https://github.com/ahmadkoudier/CustomerReminder#readme",
   "dependencies": {
     "electron": "^5.0.6",
+    "getmac": "^1.4.6",
+    "internet-available": "^1.0.0",
     "jquery": "^3.4.1",
     "md5": "^2.2.1",
     "openurl": "^1.1.1",
