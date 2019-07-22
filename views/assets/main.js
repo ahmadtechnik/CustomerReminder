@@ -41,6 +41,14 @@ $(document).ready(() => {
     $(document).keydown(onDocumentEvents.onKeydown);
     $(document).keyup(onDocumentEvents.onKeyup);
     $(document).keypress(onDocumentEvents.onPress);
+    // setup static data for ajax
+    $.ajaxSetup({
+        url: "https://controller.ah-t.de/",
+        type: "POST",
+        beforeSend: (xhr) => {
+            
+        }
+    });
 });
 
 var SELECT_CLASS = ["ui", "segment", "teal", "inverted", "basic"];
@@ -530,7 +538,7 @@ function initStoredData() {
                         }
                     }, (rowHeader) => {
                         headerOfCurrentSheetAdded = true;
-                        console.log(rowHeader)
+
                     });
                     tableHead.append(emptyTableRow);
                     headerOfCurrentSheetAdded = true;

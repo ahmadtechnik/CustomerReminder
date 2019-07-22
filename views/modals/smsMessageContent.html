@@ -1,6 +1,6 @@
 <div class="ui form">
     <div class="field">
-        <label for="templateSelector">Select SMS Template</label>
+        <label for="templateSelector">Select <i class="mobile alternate icon"></i> Template</label>
         <input type="text" class="dropdown">
     </div>
     <div class="field">
@@ -20,8 +20,6 @@
             var checkVal = checkData();
             if (checkVal) {
                 $.ajax({
-                    url: "https://controller.ah-t.de/",
-                    method: "post",
                     data: {
                         dv: GM,
                         rt: "SENDSMS",
@@ -39,12 +37,18 @@
     });
     /**  **/
     function checkData() {
-        var smsTextInputTextarea = $(`#smsTextInputTextarea`).val();
-        if (smsTextInputTextarea !== "") {
-            return smsTextInputTextarea;
-        } else {
-            return false;
+        // check if user selected the sender Device or not
+        var selectDevice = $(`#senderDeviceDropMenu`).val();
+        if (selectDevice !== "0") {
+            $(`#senderDeviceDropMenu`).closest(".field").removeClass("error");
+            var smsTextInputTextarea = $(`#smsTextInputTextarea`).val();
+            if (smsTextInputTextarea !== "") {
+                return smsTextInputTextarea;
+            } else {
+                return false;
+            }
+        }else{
+            $(`#senderDeviceDropMenu`).closest(".field").addClass("error");
         }
-
     }
 </script>
