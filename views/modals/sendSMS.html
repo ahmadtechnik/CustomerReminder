@@ -1,11 +1,11 @@
-<div class="ui modal large" id="sendSMSmodal">
+<div class="ui modal large fullscreen" id="sendSMSmodal">
     <!--  -->
     <div class="header" id="SENDSMSMODALHEADER">
         <h1 class="DENG"></h1>
     </div>
     <!--  -->
     <div class="content scrolling ">
-        <div class="ui grid">
+        <div class="ui grid relaxed">
             <!--  -->
             <div class="sixteen wide column">
                 <div class="ui equal width form">
@@ -22,19 +22,15 @@
                 </div>
             </div>
             <!--  -->
-            <div class="three column row">
+            <div class="three column row unstackable">
                 <!-- SMS message sender -->
-                <div class="column" id="smsSenderContainer">
-
-                </div>
+                <div class="  column" id="smsSenderContainer"></div>
                 <!-- Whatsapp Message Sender -->
-                <div class="column" id="whatsappSenderContainer">
-
-                </div>
-                <div class="column" id="rowDataPreview">
-
-                </div>
+                <div class="  column" id="whatsappSenderContainer"></div>
+                <!-- preview data of costumer -->
+                <div class="column" id="rowDataPreview"></div>
             </div>
+
         </div>
     </div>
     <!--  -->
@@ -61,7 +57,8 @@
             /** add list of all existing devices **/
             $.eachSync(JSON.parse(existedDevices), (i, device) => {
                 $(`#senderDeviceDropMenu`).append(
-                    `<option value="${device["id"]}"> ${device["device_name"]} > ${device["phone_number"]}</option>`);
+                    `<option value="${device["id"]}"> ${device["device_name"]} > ${device["phone_number"]}</option>`
+                );
             }, () => {
                 $(`#senderDeviceDropMenu`).dropdown();
             });

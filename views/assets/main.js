@@ -6,12 +6,46 @@ var OPENURL = require("openurl");
 var NETCONNECTION = require("internet-available");
 var MAC = require("getmac");
 
+var GM = "";
 // add new funciton To jQuery 
-MAC.getMac(function (err, macAddress) {
+MAC.getMac((err, macAddress) => {
     if (err) alert("COULD NOT GET MAC ADDRESS...");
     GM = macAddress;
+    get_queue_sms_list()
 });
 
+/**
+ * this function will create list for the sms
+ * whitch are sent from the current device
+ * this function should be interval function
+ * every few minutes
+ */
+//setInterval(get_queue_sms_list, 5000);
+var WAITINGMESSAGES = [];
+
+function get_queue_sms_list() {
+    // get all SMS queue from this device
+    $.ajax({
+        data: {
+            dv: GM,
+            rt: "GETQUEUESMSLIST",
+        },
+        /** to create list of SMS after getting the list */
+        success: (response) => {
+            try {
+                // parse geted object
+                var prase = JSON.parse(response);
+                WAITINGMESSAGES = prase;
+                console.log(WAITINGMESSAGES);
+            } catch (error) {
+
+            }
+        }
+    });
+
+}
+
+/** init new each fucntoin into jquery lib */
 $.eachSync = (obj, resu, end, start) => {
     start && start(obj);
     var objLength = Object.keys(obj).length;
@@ -46,9 +80,11 @@ $(document).ready(() => {
         url: "https://controller.ah-t.de/",
         type: "POST",
         beforeSend: (xhr) => {
-            
+
         }
     });
+
+
 });
 
 var SELECT_CLASS = ["ui", "segment", "teal", "inverted", "basic"];

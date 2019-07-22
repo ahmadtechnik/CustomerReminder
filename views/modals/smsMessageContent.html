@@ -8,12 +8,38 @@
         <textarea id="smsTextInputTextarea"></textarea>
     </div>
     <div class="field">
-        <div class="ui button green right floated" id="smsSendereBtnSubmit">
+        <div class="ui button green" id="smsSendereBtnSubmit">
             Send
         </div>
     </div>
 </div>
+<div class="ui segment" id="msgSentToSameCostomer"></div>
 <script>
+    function get_sms_queue_list_by_phone_number() {
+        $.ajax({
+            data: {
+                dv: GM,
+                rt: "GETSMSLISTBYPHONENUMBER",
+                pn: SELECTEDROW["Telefonnummer"]
+            },
+            success: (response) => {
+                var parsed = JSON.parse(response);
+                $.eachSync(parsed, (i, row) => {
+                    $(`#msgSentToSameCostomer`)
+                        .append(
+                            `<p>
+                                M. Status : <span class="redWhite">${row["sms_status"]}</span>
+                                M. Text : <span class="redWhite">${row["sms_text"]}</span>
+                                M. Date : <span class="redWhite">${row["order_receive_date"]}</span>
+                            </p>`
+                        );
+                })
+
+            }
+        });
+    };
+    get_sms_queue_list_by_phone_number();
+    /** set on click send SMS button Aciton **/
     $(`#smsSendereBtnSubmit`).click((event) => {
         /** Check internet connectivity **/
         NETCONNECTION().then(function () {
@@ -24,10 +50,20 @@
                         dv: GM,
                         rt: "SENDSMS",
                         row: SELECTEDROW,
-                        text: checkVal
+                        text: checkVal,
+                        senderDevice: $(`#senderDeviceDropMenu`).val()
                     },
                     success: (response) => {
-                        console.log(response);
+                        var parsed = JSON.parse(response);
+                        if (parsed.STATUS) {
+                            alert(
+                                "MESSAGE INSERTED INTO QUEUE LIST, it is will be send soon ..."
+                            );
+                            $(`#sendSMSmodal`).modal("hide");
+                        } else {
+                            alert("THERE IS AN ERROR : " + response);
+                            $(`#sendSMSmodal`).modal("hide");
+                        }
                     }
                 });
             }
@@ -47,7 +83,7 @@
             } else {
                 return false;
             }
-        }else{
+        } else {
             $(`#senderDeviceDropMenu`).closest(".field").addClass("error");
         }
     }
