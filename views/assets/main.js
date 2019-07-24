@@ -379,7 +379,7 @@ function onCellClickAction(event) {
               <span id="uploadedFileRowInfo">No documents are listed for this customer.</span>
             </div>
             <div class="ui primary button" onclick="$('#uploadAttachedElementsToRow').click()">Add Document</div>
-            <input type="file" class="hidden" id="uploadAttachedElementsToRow" rowHash="${rowID}"/>
+            <input accept="application/pdf" type="file" class="hidden" id="uploadAttachedElementsToRow" rowHash="${rowID}"/>
           </div>`)
         ])
     ));
@@ -423,11 +423,12 @@ var onUploadFileToRowAction = (event) => {
         var rowID = $(event.target).attr("rowHash");
         UPLOADEDFILE["fileExtention"] = fileName.split(".").pop();
         UPLOADEDFILE["rowID"] = rowID;
-        var uploadedFileData = `Name: ${fileName}<br>Type : ${fileType}<br>Size: ${(fileSize / 1024 ).toFixed(2)}KB`;
+        var uploadedFileData =
+            `Name: ${fileName}<br>Type : ${fileType}<br>Size: ${(fileSize / 1024 ).toFixed(2)}KB`;
         $(`#uploadedFileRowInfo`).html(uploadedFileData);
         var v = new FileReader();
         var file = $(`#uploadAttachedElementsToRow`).get(0).files[0];
-        console.log();
+
         v.onload = (f) => {
             UPLOADEDFILE["file"] = f.target.result;
         };
@@ -528,13 +529,16 @@ function onInsertDataModalOnApprove(modal) {
             fileReader.readAsArrayBuffer(file);
             /** */
             fileReader.onload = (f) => {
+                var path = PATH.join(__dirname, "..", "storage", UPLOADEDFILE.rowID + "." + UPLOADEDFILE.fileExtention);
                 /** check if the storage dir exist or not */
                 FS.existsSync(PATH.join(__dirname, "..", "storage")) ? "" : FS.mkdirSync(PATH.join(__dirname, "..", "storage"));
-                FS.writeFile(PATH.join(__dirname, "..", "storage", UPLOADEDFILE.rowID + "." + UPLOADEDFILE.fileExtention),
+                FS.writeFile(path,
                     new Uint16Array(UPLOADEDFILE["file"]), (err) => {
                         if (!err) {
                             UPLOADEDFILE = null;
-                        };
+                        } else {
+                            alert("ERROR : " + err);
+                        }
                     });
             }
         }
