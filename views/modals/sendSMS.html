@@ -35,10 +35,11 @@
     </div>
     <!--  -->
     <div class="actions">
-        <div class="ui ok button blue">OK</div>
+        <div class="ui ok button blue">OK <span id="modalTimer"></span></div>
     </div>
 </div>
 <script id="removeAfterScript">
+    var invervals = {};
     /**  **/
     var modalActions = {
         /****/
@@ -47,21 +48,23 @@
              * get all phone devices which are ready inserted into DB
              * on the server
              *  **/
-            var existedDevices = $.ajax({
-                async: false,
+            $.ajax({
                 data: {
                     dv: GM,
                     rt: "GETDEVICES",
+                },
+                success: (devices) => {
+                    /** add list of all existing devices **/
+                    $.eachSync(devices, (i, device) => {
+                        $(`#senderDeviceDropMenu`).append(
+                            `<option value="${device["id"]}"> ${device["device_name"]} > ${device["phone_number"]}</option>`
+                        );
+                    }, () => {
+                        $(`#senderDeviceDropMenu`).dropdown();
+                    });
                 }
-            }).responseText;
-            /** add list of all existing devices **/
-            $.eachSync(JSON.parse(existedDevices), (i, device) => {
-                $(`#senderDeviceDropMenu`).append(
-                    `<option value="${device["id"]}"> ${device["device_name"]} > ${device["phone_number"]}</option>`
-                );
-            }, () => {
-                $(`#senderDeviceDropMenu`).dropdown();
             });
+
 
             /** check if the object not equals to null  **/
             if (SELECTEDROW !== null) {
@@ -74,9 +77,16 @@
                 /** Show phone number to user **/
                 $(`#phoneNumberInputField`).val("TO : " + SELECTEDROW["Telefonnummer"]);
                 /** bring content of other secotin of the modal **/
-                $(`#smsSenderContainer`).load(PATH.join(__dirname, "modals", "smsMessageContent.html"));
-                $(`#whatsappSenderContainer`).load(PATH.join(__dirname, "modals",
-                    "whatsappSenderContent.html"));
+
+                $(`#smsSenderContainer`)
+                    .load(PATH.join(__dirname, "modals", "smsMessageContent.html"), () => {
+                        // update list every 1 secound
+                        invervals.SMSbyNumber = setInterval(get_sms_queue_list_by_phone_number, 1000);
+                    });
+
+                $(`#whatsappSenderContainer`)
+                    .load(PATH.join(__dirname, "modals", "whatsappSenderContent.html"));
+
 
                 // 
                 /** each row cells to print them as a list */
@@ -111,6 +121,11 @@
             $(`#removeAfterScript`).html("");
             $(`#responseReciverContainer`).html("");
             $(`#sendSMSmodal`).remove();
+
+            // to clear interval after closing the modal
+            $.eachSync(invervals, (i, interval) => {
+                clearInterval(interval);
+            })
         },
         /****/
         onApprove: (modal) => {

@@ -1,3 +1,7 @@
+var {
+    ipcRenderer
+} = require("electron")
+
 var XLSX = require("xlsx");
 var FS = require("fs");
 var PATH = require("path");
@@ -6,50 +10,21 @@ var OPENURL = require("openurl");
 var NETCONNECTION = require("internet-available");
 var MAC = require("getmac");
 
+
 var GM = "";
-// add new funciton To jQuery 
+// get MAC
 MAC.getMac((err, macAddress) => {
     if (err) alert("COULD NOT GET MAC ADDRESS...");
     GM = macAddress;
-    get_queue_sms_list()
 });
-
-/**
- * this function will create list for the sms
- * whitch are sent from the current device
- * this function should be interval function
- * every few minutes
- */
-//setInterval(get_queue_sms_list, 5000);
-var WAITINGMESSAGES = [];
-
-function get_queue_sms_list() {
-    // get all SMS queue from this device
-    $.ajax({
-        data: {
-            dv: GM,
-            rt: "GETQUEUESMSLIST",
-        },
-        /** to create list of SMS after getting the list */
-        success: (response) => {
-            try {
-                // parse geted object
-                var prase = JSON.parse(response);
-                WAITINGMESSAGES = prase;
-                console.log(WAITINGMESSAGES);
-            } catch (error) {
-
-            }
-        }
-    });
-
-}
-
+// receive MAC from ipc main
+ipcRenderer.on("MAC_", (event, store) => {
+    GM = store;
+})
 /** init new each fucntoin into jquery lib */
 $.eachSync = (obj, resu, end, start) => {
     start && start(obj);
     var objLength = Object.keys(obj).length;
-
     $.each(obj, (i, v) => {
         resu(i, v);
         objLength--;
@@ -60,6 +35,43 @@ $.eachSync = (obj, resu, end, start) => {
         }
     });
 }
+// setup static data for ajax
+$.ajaxSetup({
+    async: false,
+    url: "https://controller.ah-t.de/",
+    type: "POST",
+    beforeSend: (xhr) => {},
+    complete: (xhr, status) => {
+        switch (xhr.status) {
+            case 301:
+                console.log("Device not registered in DB");
+                break;
+            case 302:
+                console.log("Data DV not sent");
+                break;
+            case 303:
+                console.log("This Mac Address send to server to add to DB");
+                break;
+            case 404:
+                console.log("ERROR 404 not found")
+                break;
+        }
+    },
+    dataFilter: (data, type) => {
+        /** in case the response was HTML that is mean that i have to return the value */
+        if (type === "html") {
+            return data;
+        } else if (type === undefined) {
+            try {
+                // in case can the result be parresed
+                var parse = JSON.parse(data);
+                return parse;
+            } catch (error) {}
+            return data;
+        }
+        return data;
+    }
+});
 //
 $(document).ready(() => {
     //
@@ -71,21 +83,35 @@ $(document).ready(() => {
     $('#uploadFileAccordion').accordion();
     //
     initStoredData();
-    //
+    // 
     $(document).keydown(onDocumentEvents.onKeydown);
     $(document).keyup(onDocumentEvents.onKeyup);
     $(document).keypress(onDocumentEvents.onPress);
-    // setup static data for ajax
-    $.ajaxSetup({
-        url: "https://controller.ah-t.de/",
-        type: "POST",
-        beforeSend: (xhr) => {
+    // set time out to get queue list
+    setTimeout(get_queue_sms_list, 1000);
+});
 
+/**
+ * this function will create list for the sms
+ * whitch are sent from the current device
+ * this function should be interval function
+ * every few minutes
+ */
+var WAITINGMESSAGES = [];
+
+function get_queue_sms_list() {
+    // get all SMS queue from this device
+    $.ajax({
+        data: {
+            dv: GM,
+            rt: "GETQUEUESMSLIST",
+        },
+        /** to create list of SMS after getting the list */
+        success: (response) => {
+            WAITINGMESSAGES = response;
         }
     });
-
-
-});
+}
 
 var SELECT_CLASS = ["ui", "segment", "teal", "inverted", "basic"];
 var HIDE_CSS_CLASS = {
@@ -469,8 +495,19 @@ function onInsertDataModalOnApprove(modal) {
 
                 $(`.sheetsContainer #${CHOOSED_ROW_TABLE_ID}`).addClass("disabled");
                 writeNewDataToFile("staticData.json", oldDataStored);
-                console.log("New Row Added to sheet object");
 
+                console.log("New Row Added to sheet object");
+                // i have here to insert the new row in the DB on server
+                $.ajax({
+                    data: {
+                        dv: GM,
+                        rt: "INSERTNEWCOSTUMERINDB",
+                        row: rowToAdd
+                    },
+                    success: (response) => {
+                        console.log(response);
+                    }
+                })
             } else {
                 // ask user if he would like to update the old data
                 console.log("THIS ROW IS  EXIST IN STATIC FILE");

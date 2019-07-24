@@ -82,7 +82,7 @@
     background-color: #f54242 !important;
     color: white !important;
     text-align: center !important;
-    
+
 }
 
 .newDataToRows {
@@ -93,7 +93,7 @@
 
 .oldDataStoredInStaticFile {
     width: 70%;
-  
+
     max-height: 500px;
 }
 
@@ -101,15 +101,32 @@
     display: none !important;
 }
 
-tr{
+tr {
     cursor: pointer;
 }
-.withoutPadding{
+
+.withoutPadding {
     padding-bottom: 0px !important;
 }
+
 .spical {
     background-color: Tomato !important;
     color: white !important;
     border-radius: 10px 100px / 120px;
     padding: 10px !important;
+}
+
+.SMSSTATUS_NEW {
+    background-color: #f54242 !important;
+    color: white !important;
+}
+
+.SMSSTATUS_SENT {
+    background-color: green !important;
+    color: white !important;
+}
+
+.SMSSTATUS_CANCELED {
+    background-color: #f54242 !important;
+    color: white !important;
 }

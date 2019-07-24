@@ -15,7 +15,20 @@
 </div>
 <div class="ui segment" id="msgSentToSameCostomer"></div>
 <script>
+    var timer = 60;
+    /** 
+     * this function to refresh the result from server 
+     * and get all queue list by phone number
+     *  **/
     function get_sms_queue_list_by_phone_number() {
+        timer--;
+        /** close the modal after 1 minute **/
+        $(`#modalTimer`).transition('set looping').transition('horizontal flip', '1000ms')
+        $(`#modalTimer`).text(timer);
+        if (timer === 0) {
+            $(`#sendSMSmodal`).modal("hide");
+        };
+        // get all message for current number
         $.ajax({
             data: {
                 dv: GM,
@@ -23,22 +36,61 @@
                 pn: SELECTEDROW["Telefonnummer"]
             },
             success: (response) => {
-                var parsed = JSON.parse(response);
-                $.eachSync(parsed, (i, row) => {
-                    $(`#msgSentToSameCostomer`)
-                        .append(
-                            `<p>
-                                M. Status : <span class="redWhite">${row["sms_status"]}</span>
-                                M. Text : <span class="redWhite">${row["sms_text"]}</span>
-                                M. Date : <span class="redWhite">${row["order_receive_date"]}</span>
-                            </p>`
-                        );
-                })
+                var list = $(`<div class="ui relaxed divided list"></div>`);
+                $.eachSync(response, (i, row) => {
+                    /** To create list of the queue list of current phone number **/
 
+                    var listItem = $(
+                        `<div class="item" rowID="${row["id"]}" messageStatus="${row["sms_status"]}"></div>`
+                    );
+                    var itemContent = $(`<div class="content"></div>`).append([
+                        $(`<div class="header">#${row["id"]}: 
+                             <span class="SMSSTATUS_${row["sms_status"]}">${row["sms_status"]}</span>
+                             <sup>${row["order_receive_date"]}</sup>
+                           </div>`),
+                        $(`<div class="description">${row["sms_text"]}</div>`)
+                    ]);
+
+                    // append the content to list 
+                    list.append([
+                        listItem.append([
+                            $(
+                                `<i class="trash icon removeMessageFromServer" rowID="${row["id"]}"></i>`
+                            ),
+                            itemContent
+                        ])
+                    ]);
+
+                }, (response) => {
+                    $(`#msgSentToSameCostomer`).html(list);
+                    /** set remove message btn action **/
+                    $(`.removeMessageFromServer`).click((event) => {
+                        var messageID = $(event.target).attr("rowID");
+                        /** Send Request to remove message by id **/
+                        $.ajax({
+                            data: {
+                                dv: GM,
+                                rt: "REMOVEQUEUEDMESSAGEBYID",
+                                mid: messageID
+                            },
+                            success: (ajaxResponse) => {
+                                if (ajaxResponse.MESSAGEREMOVED) {
+                                    get_sms_queue_list_by_phone_number()
+                                } else {
+                                    alert("ERROR REMOVING THE MESSAGE...");
+                                }
+                            }
+                        });
+                    })
+                });
+                // disable all row messages which are sent
+                $(`[messageStatus='SENT']`).addClass("disabled");
             }
         });
     };
-    get_sms_queue_list_by_phone_number();
+
+
+
     /** set on click send SMS button Aciton **/
     $(`#smsSendereBtnSubmit`).click((event) => {
         /** Check internet connectivity **/
@@ -54,8 +106,7 @@
                         senderDevice: $(`#senderDeviceDropMenu`).val()
                     },
                     success: (response) => {
-                        var parsed = JSON.parse(response);
-                        if (parsed.STATUS) {
+                        if (response.STATUS) {
                             alert(
                                 "MESSAGE INSERTED INTO QUEUE LIST, it is will be send soon ..."
                             );
