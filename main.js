@@ -6,7 +6,8 @@ var {
 } = require("electron");
 var path = require("path");
 var mac = require("getmac");
-app.on("ready", appOnReady);
+app.on("ready",appOnReady);
+
 app.on("before-quit", () => {
 
 });
@@ -22,20 +23,20 @@ function appOnReady() {
         }
 
     });
+    // get mac addres of this device
     mac.getMac((err, macAddress) => {
         if (err) alert("COULD NOT GET MAC ADDRESS...");
         console.log(macAddress)
         MainWindow.webContents.setUserAgent("CostumerReminder");
         MainWindow.loadFile("./views/index.html");
-        MainWindow.on("close", WindowOnClose)
+        MainWindow.on("close", WindowOnClose);
 
         // emit the mac address to render window
         MainWindow.webContents.on("did-finish-load", () => {
             MainWindow.webContents.send("MAC_"  , macAddress);
         })
 
-    })
-
+    });
 }
 //
 function WindowOnClose(thisWindow) {

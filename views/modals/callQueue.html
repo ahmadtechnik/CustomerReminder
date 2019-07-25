@@ -1,0 +1,84 @@
+<div class="ui grid stackable inverted ">
+    <div class="three column row">
+        <div class="column">
+            <div class="ui segment">
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" name="public">
+                    <label>Add To Call Queue List.</label>
+                </div>
+            </div>
+        </div>
+        <div class="column">
+
+        </div>
+        <div class="column">
+
+        </div>
+    </div>
+</div>
+
+<script>
+    var HAS_DATA = null;;
+    $(`.checkbox`).checkbox({
+        onChange: () => {
+            var value = $(`.checkbox`).checkbox("is checked");
+            // to insert new row in queue list
+            if (!HAS_DATA) {
+                $.ajax({
+                    data: {
+                        dv: GM,
+                        rt: "INSERTNEWQUEUEROW",
+                        costumerHASH: SELECTEDROW["#hash"]
+                    },
+                    success: (response) => {
+                        get_status();
+                    }
+                });
+            }
+            // to update the row in call queue list
+            else {
+                $.ajax({
+                    data: {
+                        dv: GM,
+                        rt: "UPDATEQUEUEROW",
+                        rowID: HAS_DATA.ROW_DATA.id,
+                        newValue: value
+                    },
+                    success: (response) => {}
+                });
+            }
+            $(`.checkbox`).checkbox("set disabled");
+            // reenable the checkbox button after sending the value to server
+            setTimeout(() => {
+                $(`.checkbox`).checkbox("set enabled");
+                get_status();
+            }, 2000);
+
+        }
+    });
+    get_status();
+
+    function get_status() {
+        $.ajax({
+            data: {
+                dv: GM,
+                rt: "GETCALLQUEUELISTBYPHONENUMBER",
+                costumerHASH: SELECTEDROW["#hash"]
+            },
+            success: (response) => {
+                if (response.NEW) {} else if (response.ROW_DATA) {
+                    HAS_DATA = response;
+                    /** cehck the box in case was in call queue list **/
+                    switch (response.ROW_DATA.call_status) {
+                        case "ACTIVEWAIT":
+                            $(`.checkbox`).checkbox("set checked");
+                            break;
+                        case "CANCELED":
+                            $(`.checkbox`).checkbox("set unchecked");
+                            break;
+                    }
+                }
+            }
+        })
+    }
+</script>

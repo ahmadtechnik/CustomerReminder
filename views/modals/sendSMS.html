@@ -22,15 +22,28 @@
                 </div>
             </div>
             <!--  -->
+            <div class="one column row">
+                <div class="ui basic column segment inverted" id="callQueueListLoader">
+
+                </div>
+            </div>
+            <!--  -->
             <div class="three column row unstackable">
                 <!-- SMS message sender -->
-                <div class="  column" id="smsSenderContainer"></div>
+                <div class="column" id="smsSenderContainer"></div>
                 <!-- Whatsapp Message Sender -->
-                <div class="  column" id="whatsappSenderContainer"></div>
+                <div class="column" id="whatsappSenderContainer"></div>
                 <!-- preview data of costumer -->
-                <div class="column" id="rowDataPreview"></div>
-            </div>
+                <div class="column" >
+                    <div class="ui accordion">
+                        <div class="title active"><i class="dropdown icon"></i>Show Data</div>
+                        <div class="content" id="rowDataPreview"></div>
+                    </div>
+                </div>
 
+
+
+            </div>
         </div>
     </div>
     <!--  -->
@@ -44,6 +57,7 @@
     var modalActions = {
         /****/
         onShow: (modal) => {
+            $(`.accordion`).accordion();
             /** 
              * get all phone devices which are ready inserted into DB
              * on the server
@@ -87,7 +101,7 @@
                 $(`#whatsappSenderContainer`)
                     .load(PATH.join(__dirname, "modals", "whatsappSenderContent.html"));
 
-
+                $(`#callQueueListLoader`).load(PATH.join(__dirname, "modals", "callQueue.html"));
                 // 
                 /** each row cells to print them as a list */
                 var list = $(`<div class="ui middle aligned list"></div>`);
@@ -125,7 +139,7 @@
             // to clear interval after closing the modal
             $.eachSync(invervals, (i, interval) => {
                 clearInterval(interval);
-            })
+            });
         },
         /****/
         onApprove: (modal) => {

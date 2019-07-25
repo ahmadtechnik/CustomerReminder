@@ -27,6 +27,12 @@
         $(`#modalTimer`).text(timer);
         if (timer === 0) {
             $(`#sendSMSmodal`).modal("hide");
+        } else if (timer === 5) {
+            $(`#modalTimer`).css({
+                color: "red",
+                "font-size": 25,
+                "background-color": "white"
+            });
         };
         // get all message for current number
         $.ajax({
@@ -36,6 +42,10 @@
                 pn: SELECTEDROW["Telefonnummer"]
             },
             success: (response) => {
+                if (Object.keys(response).length === 0) {
+                    $(`#msgSentToSameCostomer`).html("");
+                    return false;
+                }
                 var list = $(`<div class="ui relaxed divided list"></div>`);
                 $.eachSync(response, (i, row) => {
                     /** To create list of the queue list of current phone number **/
@@ -107,9 +117,6 @@
                     },
                     success: (response) => {
                         if (response.STATUS) {
-                            alert(
-                                "MESSAGE INSERTED INTO QUEUE LIST, it is will be send soon ..."
-                            );
                             $(`#sendSMSmodal`).modal("hide");
                         } else {
                             alert("THERE IS AN ERROR : " + response);
