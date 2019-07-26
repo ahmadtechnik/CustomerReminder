@@ -10,7 +10,25 @@ var OPENURL = require("openurl");
 var NETCONNECTION = require("internet-available");
 var MAC = require("getmac");
 
+var INTERNET = false;
+CheckInternet();
+setInterval(CheckInternet, 10000);
 
+function CheckInternet() {
+    // Most easy way
+    NETCONNECTION({
+        // Provide maximum execution time for the verification
+        timeout: 5000,
+        // If it tries 5 times and it fails, then it will throw no internet
+        retries: 5
+        // cheange internat aviliblity to true in case the internet is connected
+    }).then(() => {
+        INTERNET = true;
+    }).catch(() => {
+        INTERNET = false;
+    })
+
+}
 var GM = "";
 // get MAC
 MAC.getMac((err, macAddress) => {
@@ -40,7 +58,12 @@ $.ajaxSetup({
     async: false,
     url: "https://controller.ah-t.de/",
     type: "POST",
-    beforeSend: (xhr) => {},
+    beforeSend: (xhr) => {
+        if (!INTERNET) {
+            xhr.abort();
+            console.log("NO INTERNET...");
+        }
+    },
     complete: (xhr, status) => {
         switch (xhr.status) {
             case 301:
@@ -89,6 +112,10 @@ $(document).ready(() => {
     $(document).keypress(onDocumentEvents.onPress);
     // set time out to get queue list
     setTimeout(get_queue_sms_list, 1000);
+
+    // 
+    var cook = document.cookie;
+    console.log(cook);
 });
 
 /**
@@ -499,6 +526,8 @@ function onInsertDataModalOnApprove(modal) {
 
                 console.log("New Row Added to sheet object");
                 // i have here to insert the new row in the DB on server
+                // after inserting the new row it should alarm the user that
+                // the inserting was successfully done
                 $.ajax({
                     data: {
                         dv: GM,
@@ -882,7 +911,13 @@ function compairTheDate() {
 
 /** the static file table row click action */
 var SELECTEDROW = null;
-
+/**
+ * this function to assign the action 
+ * on cklick on any row of the secound row
+ * to show the right section and preview data 
+ * to make the user able to send sms or email 
+ * or add the costumer to queue list
+ */
 function secounderyTableRowClick(event) {
     var F = createOrOpenFile("staticData.json");
     var currentRow = $(this);
