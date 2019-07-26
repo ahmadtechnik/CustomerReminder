@@ -70,3 +70,5 @@ staticData.json
 
 # ignore storage dir
 /storage
+
+/CustomerReminder-win32-x64

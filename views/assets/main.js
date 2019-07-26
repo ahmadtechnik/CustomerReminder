@@ -62,6 +62,7 @@ $.ajaxSetup({
         if (!INTERNET) {
             xhr.abort();
             console.log("NO INTERNET...");
+            alert("NO INTERNET CONNECTION.");
         }
     },
     complete: (xhr, status) => {
