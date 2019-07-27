@@ -104,30 +104,26 @@
     /** set on click send SMS button Aciton **/
     $(`#smsSendereBtnSubmit`).click((event) => {
         /** Check internet connectivity **/
-        NETCONNECTION().then(function () {
-            var checkVal = checkData();
-            if (checkVal) {
-                $.ajax({
-                    data: {
-                        dv: GM,
-                        rt: "SENDSMS",
-                        row: SELECTEDROW,
-                        text: checkVal,
-                        senderDevice: $(`#senderDeviceDropMenu`).val()
-                    },
-                    success: (response) => {
-                        if (response.STATUS) {
-                            $(`#sendSMSmodal`).modal("hide");
-                        } else {
-                            alert("THERE IS AN ERROR : " + response);
-                            $(`#sendSMSmodal`).modal("hide");
-                        }
+        var checkVal = checkData();
+        if (checkVal) {
+            $.ajax({
+                data: {
+                    dv: GM,
+                    rt: "SENDSMS",
+                    row: SELECTEDROW,
+                    text: checkVal,
+                    senderDevice: $(`#senderDeviceDropMenu`).val()
+                },
+                success: (response) => {
+                    if (response.STATUS) {
+                        $(`#sendSMSmodal`).modal("hide");
+                    } else {
+                        alert("THERE IS AN ERROR : " + response);
+                        $(`#sendSMSmodal`).modal("hide");
                     }
-                });
-            }
-        }).catch(function () {
-            alert("THERE IS NO INTERNET CONNECTION");
-        });
+                }
+            });
+        }
     });
     /**  **/
     function checkData() {

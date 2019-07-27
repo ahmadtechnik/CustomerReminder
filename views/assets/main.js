@@ -17,7 +17,7 @@ setInterval(CheckInternet, 10000);
 function CheckInternet() {
     // Most easy way
     NETCONNECTION({
-        // Provide maximum execution time for the verification
+        //Provide maximum execution time for the verification
         timeout: 5000,
         // If it tries 5 times and it fails, then it will throw no internet
         retries: 5
@@ -55,6 +55,7 @@ $.eachSync = (obj, resu, end, start) => {
         });
     } catch (error) {
         alert("ERROR FEACHING OBJECT : " + error + JSON.stringify(obj));
+        console.log(obj , error);
     }
 }
 // setup static data for ajax
