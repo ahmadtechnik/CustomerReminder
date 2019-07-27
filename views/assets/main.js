@@ -43,15 +43,19 @@ ipcRenderer.on("MAC_", (event, store) => {
 $.eachSync = (obj, resu, end, start) => {
     start && start(obj);
     var objLength = Object.keys(obj).length;
-    $.each(obj, (i, v) => {
-        resu(i, v);
-        objLength--;
-        if (objLength <= 0) {
-            if (end) {
-                end(obj, i);
+    try {
+        $.each(obj, (i, v) => {
+            resu(i, v);
+            objLength--;
+            if (objLength <= 0) {
+                if (end) {
+                    end(obj, i);
+                }
             }
-        }
-    });
+        });
+    } catch (error) {
+        alert("ERROR FEACHING OBJECT : " + error + JSON.stringify(obj));
+    }
 }
 // setup static data for ajax
 $.ajaxSetup({
@@ -77,7 +81,7 @@ $.ajaxSetup({
                 console.log("This Mac Address send to server to add to DB");
                 break;
             case 404:
-                console.log("ERROR 404 not found")
+                console.log("ERROR 404 not found");
                 break;
         }
     },
@@ -112,11 +116,9 @@ $(document).ready(() => {
     $(document).keyup(onDocumentEvents.onKeyup);
     $(document).keypress(onDocumentEvents.onPress);
     // set time out to get queue list
+    // to update getting sms queue list status every few minutes.
     setTimeout(get_queue_sms_list, 1000);
 
-    // 
-    var cook = document.cookie;
-    console.log(cook);
 });
 
 /**
@@ -198,7 +200,6 @@ function onFileUploadedAction() {
                             }, () => {
                                 FILEDATA[sheetName] = jsonSheet;
                             });
-
                             /** create search fields as long as the header of the CSV file */
                             $.eachSync(sheetHeader, (i, e) => {
                                     /** 
@@ -268,6 +269,7 @@ var searchMethods = {
         var by = $(event.target).attr("by");
         var value = $(event.target).val().toLowerCase();
         var foundedRows = {};
+        // open static file
         var F = createOrOpenFile("staticData.json");
         if (event.keyCode === 13) {
             if (value !== "") {
@@ -1020,7 +1022,11 @@ function secounderyTableRowClick(event) {
         });
     }
 };
-/** actions to list of row data showed */
+/** 
+ * actions to list of row data showed
+ * this list contain the actions of the labeled list items 
+ * which are cklickabled 
+ *  */
 var listActions = {
     sendSMS: (event) => {
         $("#responseReciverContainer").load(PATH.join(__dirname, "modals", "sendSMS.html"));
@@ -1032,7 +1038,6 @@ var listActions = {
 
     }
 }
-
 
 /** age range > 6570 && < 36500 Days*/
 /** Contracts term range 1095 . Alarm Range  */
@@ -1063,9 +1068,7 @@ var onDocumentEvents = {
         KEYPRESSEDONDOCOMENT = null;
         PRESSMSCOUNTER = 0;
     },
-    onPress: () => {
-
-    }
+    onPress: () => {}
 };
 
 /**
