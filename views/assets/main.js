@@ -260,6 +260,8 @@ function onFileUploadedAction() {
 
     } else {
         $(`#uploadedFileName`).text("No documents are listed for this customer.");
+        $(`#seatchFieldsContainer`).html("");
+        $(`#sheetsContainer`).html("");
     }
     dateCellDetactor();
 }
@@ -397,7 +399,7 @@ function onCellClickAction(event) {
             $(`<div class="field" imp='true'></div>`)
             .append([`<label>Lieferdatum<label>`, `<input type="text" id="delivery_date" readonly="readonly" />`]),
             $(`<div class="field" imp='true'></div>`)
-            .append([`<label>Laufzeit des vertrags <span class="redWhite">in Months</span><label>`, `<input type="text" id="contracts_term" />`]),
+            .append([`<label>Laufzeit des vertrags <span class="redWhite">in Months</span><label>`, `<input type="number" id="contracts_term" />`]),
             $(`<div class="field" ></div>`)
             .append([`<label>e-mail address <span class="redWhite">if exist</span><label><label>`,
                 `<input type="text" id="emailAddress" />`
