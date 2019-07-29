@@ -141,4 +141,9 @@
             $(`#senderDeviceDropMenu`).closest(".field").addClass("error");
         }
     }
+    $(`#smsTextInputTextarea`).keydown((event) => {
+        if ($(event.target).val().length > 159) {
+            return false;
+        }
+    });
 </script>
