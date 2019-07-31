@@ -103,6 +103,7 @@
 
     /** set on click send SMS button Aciton **/
     $(`#smsSendereBtnSubmit`).click((event) => {
+        console.log(DROPDOWNVALUE);
         /** Check internet connectivity **/
         var checkVal = checkData();
         if (checkVal) {
@@ -112,7 +113,7 @@
                     rt: "SENDSMS",
                     row: SELECTEDROW,
                     text: checkVal,
-                    senderDevice: $(`#senderDeviceDropMenu`).val()
+                    senderDevice: DROPDOWNVALUE
                 },
                 success: (response) => {
                     if (response.STATUS) {
@@ -128,7 +129,7 @@
     /**  **/
     function checkData() {
         // check if user selected the sender Device or not
-        var selectDevice = $(`#senderDeviceDropMenu`).val();
+        var selectDevice = DROPDOWNVALUE;
         if (selectDevice !== "0") {
             $(`#senderDeviceDropMenu`).closest(".field").removeClass("error");
             var smsTextInputTextarea = $(`#smsTextInputTextarea`).val();

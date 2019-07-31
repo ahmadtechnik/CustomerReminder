@@ -11,9 +11,8 @@
                 <div class="ui equal width form">
                     <div class="fields">
                         <div class="field">
-                            <select type="text" class="senderDeviceDropMenu ui dropdown" id="senderDeviceDropMenu">
-                                <option value="0">SENDER DEVICE</option>
-                            </select>
+                            <select type="text" class="senderDeviceDropMenu ui search selection dropdown "
+                                id="senderDeviceDropMenu"></select>
                         </div>
                         <div class="field">
                             <input type="text" disabled id="phoneNumberInputField">
@@ -34,7 +33,7 @@
                 <!-- Whatsapp Message Sender -->
                 <div class="column" id="whatsappSenderContainer"></div>
                 <!-- preview data of costumer -->
-                <div class="column" >
+                <div class="column">
                     <div class="ui accordion">
                         <div class="title active"><i class="dropdown icon"></i>Show Data</div>
                         <div class="content" id="rowDataPreview"></div>
@@ -57,29 +56,10 @@
     var modalActions = {
         /****/
         onShow: (modal) => {
+
+            import_sender_devices_list();
+
             $(`.accordion`).accordion();
-            /** 
-             * get all phone devices which are ready inserted into DB
-             * on the server
-             *  **/
-            $.ajax({
-                data: {
-                    dv: GM,
-                    rt: "GETDEVICES",
-                },
-                success: (devices) => {
-                    /** add list of all existing devices **/
-                    $.eachSync(devices, (i, device) => {
-                        $(`#senderDeviceDropMenu`).append(
-                            `<option value="${device["id"]}"> ${device["device_name"]} > ${device["phone_number"]}</option>`
-                        );
-                    }, () => {
-                        $(`#senderDeviceDropMenu`).dropdown();
-                    });
-                }
-            });
-
-
             /** check if the object not equals to null  **/
             if (SELECTEDROW !== null) {
                 /** Draw modal header **/
@@ -154,4 +134,40 @@
         onApprove: modalActions.onApprove,
         closable: false
     }).modal("show");
+
+
+    var DROPDOWNVALUE = 0 ;
+    function import_sender_devices_list() {
+        /** 
+         * get all phone devices which are ready inserted into DB
+         * on the server
+         *  **/
+        $.ajax({
+            data: {
+                dv: GM,
+                rt: "GETDEVICES",
+            },
+            success: (devices) => {
+                var valuesBuilder = [{
+                    name: "Please Select.",
+                    value: "0",
+                    selected: true
+                }];
+                /** add list of all existing devices **/
+                $.eachSync(devices, (i, device) => {
+                    valuesBuilder.push({
+                        name: `${device["device_name"]} > ${device["phone_number"]} <sup>Last seen : ${device["last_seen"]}</sup>`,
+                        value: `${device["id"]}`
+                    });
+                }, (devices) => {
+                    $(`#senderDeviceDropMenu`).dropdown({
+                        values: valuesBuilder,
+                        onChange: function (value, text, $selectedItem) {
+                            DROPDOWNVALUE = value;
+                        }
+                    });
+                });
+            }
+        });
+    }
 </script>
