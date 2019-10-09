@@ -161,7 +161,8 @@ function onFileUploadedAction() {
     // in case was the file not equals undefined
     if (file !== undefined) {
         switch (file.type) {
-            case "application/vnd.ms-excel":
+            case "":
+                
                 $(`#uploadedFileName`).text(file.name);
                 var fileReader = new FileReader();
 
@@ -448,6 +449,7 @@ function onCellClickAction(event) {
 var UPLOADEDFILE = null;
 var onUploadFileToRowAction = (event) => {
     var file = event.target.files[0];
+    console.log(file)
     if (file !== undefined) {
         UPLOADEDFILE = {};
         var fileName = file.name;
