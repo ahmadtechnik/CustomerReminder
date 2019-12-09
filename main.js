@@ -6,7 +6,7 @@ var {
 } = require("electron");
 var path = require("path");
 var mac = require("getmac");
-app.on("ready",appOnReady);
+app.on("ready", appOnReady);
 
 app.on("before-quit", () => {
 
@@ -33,7 +33,7 @@ function appOnReady() {
 
         // emit the mac address to render window
         MainWindow.webContents.on("did-finish-load", () => {
-            MainWindow.webContents.send("MAC_"  , macAddress);
+            MainWindow.webContents.send("MAC_", macAddress);
         })
 
     });

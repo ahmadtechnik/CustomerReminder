@@ -21,7 +21,7 @@ function CheckInternet() {
         timeout: 5000,
         // If it tries 5 times and it fails, then it will throw no internet
         retries: 5
-        // cheange internat aviliblity to true in case the internet is connected
+            // cheange internat aviliblity to true in case the internet is connected
     }).then(() => {
         INTERNET = true;
     }).catch(() => {
@@ -37,28 +37,28 @@ MAC.getMac((err, macAddress) => {
 });
 // receive MAC from ipc main
 ipcRenderer.on("MAC_", (event, store) => {
-    GM = store;
-})
-/** init new each fucntoin into jquery lib */
+        GM = store;
+    })
+    /** init new each fucntoin into jquery lib */
 $.eachSync = (obj, resu, end, start) => {
-    start && start(obj);
-    var objLength = Object.keys(obj).length;
-    try {
-        $.each(obj, (i, v) => {
-            resu(i, v);
-            objLength--;
-            if (objLength <= 0) {
-                if (end) {
-                    end(obj, i);
+        start && start(obj);
+        var objLength = Object.keys(obj).length;
+        try {
+            $.each(obj, (i, v) => {
+                resu(i, v);
+                objLength--;
+                if (objLength <= 0) {
+                    if (end) {
+                        end(obj, i);
+                    }
                 }
-            }
-        });
-    } catch (error) {
-        alert("ERROR FEACHING OBJECT : " + error + JSON.stringify(obj));
-        console.log(obj , error);
+            });
+        } catch (error) {
+            alert("ERROR FEACHING OBJECT : " + error + JSON.stringify(obj));
+            console.log(obj, error);
+        }
     }
-}
-// setup static data for ajax
+    // setup static data for ajax
 $.ajaxSetup({
     async: false,
     url: "https://controller.ah-t.de/",
@@ -157,12 +157,13 @@ var FILEDATA = {};
 function onFileUploadedAction() {
     var file = this.files[0];
     var thisBtn = this;
-
-    // in case was the file not equals undefined
+    console.log("File Uploaded... ")
+        // in case was the file not equals undefined
     if (file !== undefined) {
+        console.log("File Type : ", file.type);
         switch (file.type) {
-            case "":
-                
+            case "application/vnd.ms-excel":
+
                 $(`#uploadedFileName`).text(file.name);
                 var fileReader = new FileReader();
 
@@ -459,7 +460,7 @@ var onUploadFileToRowAction = (event) => {
         UPLOADEDFILE["fileExtention"] = fileName.split(".").pop();
         UPLOADEDFILE["rowID"] = rowID;
         var uploadedFileData =
-            `Name: ${fileName}<br>Type : ${fileType}<br>Size: ${(fileSize / 1024 ).toFixed(2)}KB`;
+            `Name: ${fileName}<br>Type : ${fileType}<br>Size: ${(fileSize / 1024).toFixed(2)}KB`;
         $(`#uploadedFileRowInfo`).html(uploadedFileData);
         var v = new FileReader();
         var file = $(`#uploadAttachedElementsToRow`).get(0).files[0];
@@ -478,7 +479,9 @@ var onUploadFileToRowAction = (event) => {
 /** */
 function onInsertDataModalShow(modal) {
     $("#delivery_date").datepicker({
-        dateFormat: 'dd/mm/yy'
+        dateFormat: 'dd/mm/yy',
+        changeMonth: true,
+        changeYear: true
     });
     $(`#dinamicModal`).modal("refresh");
 }
@@ -848,9 +851,9 @@ function compairTheDate() {
                 var dToDateObject = new Date(year + "-" + month + "-" + day);
 
                 var contracts_term = contracts_termColumn[i].textContent;
-                // diffrance days in MS
-                var contracts_termInMS = (contracts_term * 30) * (1000 * 60 * 60 * 24);
-                var contracts_termInDay = (contracts_term * 30);
+                // diffrance days in MS millisecound...
+                var contracts_termInMS = (contracts_term * 30.41666) * (1000 * 60 * 60 * 24);
+                var contracts_termInDay = (contracts_term * 30.41666);
                 var contracts_termInDMonth = contracts_term;
 
                 var DA = Date.parse(dateToday) + contracts_termInMS;
@@ -859,8 +862,9 @@ function compairTheDate() {
                 // Date between term and 
                 var DBTaDD = Math.floor((Date.parse(dateToday) - Date.parse(dToDateObject)) / (1000 * 60 * 60 * 24));
 
-                var leaftD = (leaft / (1000 * 60 * 60 * 24)) - DBTaDD;
-                var leaftM = leaft / (1000 * 60 * 60 * 24 * 30);
+                var leaftD = Math.floor((leaft / (1000 * 60 * 60 * 24)) - DBTaDD);
+                console.log("contracts_term : ", contracts_term);
+                var leaftM = leaft / (1000 * 60 * 60 * 24 * 30); // Left in monthes
                 // in case the contract is not starts yet
                 if (DBTaDD < 0) {
                     var td = $(`<td hCell="IMP" >${Math.abs(DBTaDD)} T</td>`);
@@ -870,6 +874,7 @@ function compairTheDate() {
                     $(`#oldDataStoredInStaticFile #${rowID}`).prepend(td);
                 }
                 // to detect soon finishing term of any cotract
+                console.log("Days left or expired : ", leaftD)
                 if (leaftD > 90 && leaftD <= 180) {
                     td.addClass("WORN");
                 } else if (leaftD < 90 && leaftD > 0) {
@@ -906,7 +911,7 @@ function compairTheDate() {
         // 
         var customerAge = Math.floor((todayMS - dateMS) / (1000 * 60 * 60 * 24 * 365.25));
         if (day === dayToday && month === monthToday) { //
-            var cakeIcon = $(`<a>${customerAge + 1 } <i class="birthday cake icon"></i></a>`);
+            var cakeIcon = $(`<a>${customerAge + 1} <i class="birthday cake icon"></i></a>`);
             $(cell).html([
                 cakeIcon,
                 dateOfBirth
